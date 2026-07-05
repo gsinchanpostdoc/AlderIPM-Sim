@@ -43,8 +43,7 @@
 
 <!-- Top-level tab bar -->
 <nav class="main-tabs" role="tablist" aria-label="Main navigation tabs">
-  <button class="main-tab active" data-tab="tab-location" role="tab" aria-selected="true" aria-controls="tab-location" tabindex="0">Location</button>
-  <button class="main-tab" data-tab="tab-parameters" role="tab" aria-selected="false" aria-controls="tab-parameters" tabindex="-1">Parameters</button>
+  <button class="main-tab active" data-tab="tab-parameters" role="tab" aria-selected="true" aria-controls="tab-parameters" tabindex="0">Parameters</button>
   <button class="main-tab" data-tab="tab-simulation" role="tab" aria-selected="false" aria-controls="tab-simulation" tabindex="-1">Simulation</button>
   <button class="main-tab" data-tab="tab-equilibrium" role="tab" aria-selected="false" aria-controls="tab-equilibrium" tabindex="-1">Equilibrium</button>
   <button class="main-tab" data-tab="tab-bifurcation" role="tab" aria-selected="false" aria-controls="tab-bifurcation" tabindex="-1">Bifurcation</button>
@@ -52,33 +51,11 @@
   <button class="main-tab" data-tab="tab-warnings" role="tab" aria-selected="false" aria-controls="tab-warnings" tabindex="-1">Early Warnings</button>
   <button class="main-tab" data-tab="tab-control" role="tab" aria-selected="false" aria-controls="tab-control" tabindex="-1">Control Comparison</button>
   <button class="main-tab" data-tab="tab-comparison" role="tab" aria-selected="false" aria-controls="tab-comparison" tabindex="-1">Scenario Comparison</button>
-  <button class="main-tab" data-tab="tab-agent" role="tab" aria-selected="false" aria-controls="tab-agent" tabindex="-1">Agent</button>
-  <button class="main-tab" data-tab="tab-reviews" role="tab" aria-selected="false" aria-controls="tab-reviews" tabindex="-1">Reviews</button>
   <button class="main-tab" data-tab="tab-about" role="tab" aria-selected="false" aria-controls="tab-about" tabindex="-1">About / Help</button>
 </nav>
 
-<!-- ══════════════ Tab: Location ══════════════ -->
-<section id="tab-location" class="tab-content active" role="tabpanel" aria-labelledby="tab-location-tab">
-  <div class="loc-intro">
-    <h2>Pick a black alder forest</h2>
-    <p>
-      Click any pin below to load a parameter calibration built from the literature metadatabase and
-      adjusted for that site&rsquo;s climate. Grey pins are seed sites (no reviewed literature values yet);
-      amber pins have partial coverage; green pins have full coverage. Confidence intervals and citation
-      counts appear beside every slider in the Parameters tab after selection.
-    </p>
-  </div>
-  <div id="loc-map" role="application" aria-label="Map of European Alnus glutinosa sites"></div>
-  <div class="loc-legend" aria-hidden="true">
-    <span><i class="loc-swatch" style="background:#9ca3af;"></i>Seed</span>
-    <span><i class="loc-swatch" style="background:#f4a261;"></i>Partial</span>
-    <span><i class="loc-swatch" style="background:#2d6a4f;"></i>Complete</span>
-  </div>
-  <div id="loc-site-card" class="loc-site-card" style="display:none;"></div>
-</section>
-
 <!-- ══════════════ Tab 1: Parameters ══════════════ -->
-<section id="tab-parameters" class="tab-content" role="tabpanel" aria-labelledby="tab-parameters-tab">
+<section id="tab-parameters" class="tab-content active" role="tabpanel" aria-labelledby="tab-parameters-tab">
 
   <!-- Inline Scenarios workbench (preset picker + custom scenario manager + compare) -->
   <div class="scenarios-bar" id="scenarios-bar">
@@ -871,16 +848,6 @@
 </section>
 
 <!-- ══════════════ Tab 6: About / Help ══════════════ -->
-<!-- ══════════════ Tab: Agent ══════════════ -->
-<section id="tab-agent" class="tab-content" role="tabpanel" aria-labelledby="tab-agent-tab">
-  <div id="tab-agent-body"><em>Loading agent status&hellip;</em></div>
-</section>
-
-<!-- ══════════════ Tab: Reviews ══════════════ -->
-<section id="tab-reviews" class="tab-content" role="tabpanel" aria-labelledby="tab-reviews-tab">
-  <div id="tab-reviews-body"><em>Loading review queue&hellip;</em></div>
-</section>
-
 <section id="tab-about" class="tab-content" role="tabpanel" aria-labelledby="tab-about-tab">
   <div class="about-container">
 
@@ -920,19 +887,20 @@
     <div class="about-section">
       <h2>Model Equations</h2>
       <div class="eq-block">
-        <h4>Within-season ODE (daily, &tau; &isin; [0, T])</h4>
+        <h4>Within-season ODE (Eqs 1&ndash;4; &tau; &isin; [0, T])</h4>
         <pre>
-dS/d&tau; = -&beta;&middot;S&middot;F/(1+h&middot;S) - c_B&middot;B&middot;(S+I)/(1+a_B&middot;(S+I)) - (&mu;_S + u_C)&middot;S
-dI/d&tau; =  &beta;&middot;S&middot;F/(1+h&middot;S) - c_B&middot;B&middot;(S+I)/(1+a_B&middot;(S+I)) - (&mu;_I + &delta; + u_C)&middot;I
-dF/d&tau; =  &eta;&middot;&delta;&middot;I - &mu;_F&middot;F + u_P
-dD/d&tau; =  &kappa;&middot;(S + I)</pre>
+dS/d&tau; = -&beta;&middot;S&middot;F/(1+h&middot;S) - c_B&middot;B_t&middot;S/(1+a_B&middot;(S+I)) - (&mu;_S + u_C)&middot;S
+dI/d&tau; =  &beta;&middot;S&middot;F/(1+h&middot;S) - c_B&middot;B_t&middot;I/(1+a_B&middot;(S+I)) - (&mu;_I + &delta; + u_C)&middot;I
+dF/d&tau; =  &eta;&middot;&delta;&middot;I - &mu;_F&middot;F + u_P          F(0) = F_t
+dD/d&tau; =  &kappa;&middot;(S + I)                       D(0) = 0
+(total larvae S+I set the bird-predation saturation; numerators are per class)</pre>
 
-        <h4>Annual map (between years)</h4>
+        <h4>Annual map (Eqs 5&ndash;8; between years)</h4>
         <pre>
-A(t+1) = R_B &middot; &sigma;_A &middot; S(T) / (1 + &sigma;_A &middot; S(T) / K(t))
-F(t+1) = &sigma;_F &middot; F(T)
-K(t+1) = K_0 &middot; exp(-&phi; &middot; D(T))
-D(t+1) = D(T)</pre>
+S(0)   = R_B&middot;A_t / (1 + A_t/K_t)        I(0)=0,  F(0)=F_t      (Eq 5, Beverton&ndash;Holt)
+A(t+1) = &sigma;_A&middot;S(T)                          F(t+1) = &sigma;_F&middot;F(T)   (Eq 6)
+B_t    = B_index&middot;(1 + &xi;&middot;u_B)                                   (Eq 7)
+K(t+1) = K_0&middot;exp(-&phi;&middot;D_t)                                       (Eq 8)</pre>
       </div>
     </div>
 
@@ -1008,9 +976,7 @@ D(t+1) = D(T)</pre>
 <script src="js/charts.js"></script>
 <script src="js/app.js"></script>
 <script src="js/wiring.js"></script>
-<script src="js/location.js"></script>
 <script src="js/friendly.js"></script>
-<script src="js/agent-ui.js"></script>
 <script src="js/scenarios-inline.js"></script>
 
 </body>
