@@ -13,15 +13,20 @@ class AlderIPMSimModel {
     this.params = Object.assign(getDefaults(), params || {});
     this.u_C = 0.0; // direct larval removal effort
     this.u_P = 0.0; // parasitoid augmentation effort
+    this.u_B = 0.0; // annual bird-habitat enhancement effort (Eq 7)
   }
 
   /**
-   * Right-hand side of the within-season ODE system.
+   * Right-hand side of the within-season ODE system (Eqs 1-4).
    *
-   * dS/dt = -beta*S*F/(1+h*S) - c_B*B_t*(S+I)/(1+a_B*(S+I)) - (mu_S+u_C)*S
-   * dI/dt =  beta*S*F/(1+h*S) - c_B*B_t*(S+I)/(1+a_B*(S+I)) - (mu_I+delta+u_C)*I
-   * dF/dt =  eta*delta*I - mu_F*F + u_P
-   * dD/dt =  kappa*(S + I)
+   * dS/dtau = -beta*S*F/(1+h*S) - c_B*B_t*S/(1+a_B*(S+I)) - (mu_S+u_C)*S
+   * dI/dtau =  beta*S*F/(1+h*S) - c_B*B_t*I/(1+a_B*(S+I)) - (mu_I+delta+u_C)*I
+   * dF/dtau =  eta*delta*I - mu_F*F + u_P
+   * dD/dtau =  kappa*(S + I)
+   *
+   * Bird predation uses class-specific numerators (S for dS, I for dI); the
+   * total larval density (S+I) enters only the shared saturation denominator.
+   * Effective bird pressure follows Eq 7: B_t = B_index*(1 + xi*u_B).
    */
   withinSeasonRHS(tau, y) {
     const p = this.params;
@@ -31,19 +36,24 @@ class AlderIPMSimModel {
     const F = Math.max(y[2], 0.0);
     const D = y[3];
 
-    const B_t = p.B_index;
+    // Effective bird pressure with habitat enhancement (Eq 7). u_B defaults to
+    // 0, so baseline (unmanaged) behaviour is unchanged. p.rho is the scaling xi.
+    const xi = (p.rho !== undefined ? p.rho : 0.0);
+    const B_t = p.B_index * (1.0 + xi * this.u_B);
 
     // Holling Type II parasitism
     const parasitism = p.beta * S * F / (1.0 + p.h * S);
 
-    // Bird predation (Holling II on total larvae)
-    const totalLarvae = S + I;
-    const birdPred = p.c_B * B_t * totalLarvae / (1.0 + p.a_B * totalLarvae);
+    // Bird predation (Holling II): (S+I) sets the saturation denominator only;
+    // the numerator is class-specific (Eqs 1-2).
+    const birdSat = 1.0 + p.a_B * (S + I);
+    const birdPredS = p.c_B * B_t * S / birdSat;
+    const birdPredI = p.c_B * B_t * I / birdSat;
 
-    const dS = -parasitism - birdPred - (p.mu_S + this.u_C) * S;
-    const dI = parasitism - birdPred - (p.mu_I + p.delta + this.u_C) * I;
+    const dS = -parasitism - birdPredS - (p.mu_S + this.u_C) * S;
+    const dI = parasitism - birdPredI - (p.mu_I + p.delta + this.u_C) * I;
     const dF = p.eta * p.delta * I - p.mu_F * F + this.u_P;
-    const dD = p.kappa * totalLarvae;
+    const dD = p.kappa * (S + I);
 
     return [dS, dI, dF, dD];
   }
@@ -176,83 +186,135 @@ class AlderIPMSimModel {
   }
 
   /**
-   * Compute the parasitoid invasion reproduction number R_P.
+   * Parasitoid invasion threshold R_P (Eq 11), computed exactly as
+   *   R_P = sigma_F * dF(T)/dF(0)
+   * from the variational (sensitivity) equations of the within-season ODE,
+   * evaluated along the parasitoid-free trajectory S̄(tau). This reproduces the
+   * paper's transcritical boundary (R_P = 1) and its bird-pressure dependence,
+   * unlike the interpretable closed-form approximation (Eq 11a).
+   *
+   * The optional S_bar argument is ignored (kept for call-site compatibility).
    */
   computeRP(S_bar) {
     const p = this.params;
+    const savedUP = this.u_P;
+    this.u_P = 0.0;                          // parasitoid-free base state (F = 0 => I = 0)
+    const uC = this.u_C;
+    const xi = (p.rho !== undefined ? p.rho : 0.0);
+    const B_t = p.B_index * (1.0 + xi * this.u_B);
 
-    if (S_bar === undefined || S_bar === null) {
-      // Approximate parasitoid-free equilibrium
-      const oldUP = this.u_P;
-      this.u_P = 0.0;
-      let A_t = p.K_0 * 0.5;
-      let K_t = p.K_0;
-      let endVals;
-      for (let i = 0; i < 200; i++) {
-        // Beverton-Holt at season start
-        const S0 = p.R_B * A_t / (1.0 + A_t / K_t);
-        const result = this.integrateSeason(S0, 0.0, 0.0, 0.0);
-        endVals = result.endVals;
-        const S_T = endVals.S_T;
-        const D_T = endVals.D_T;
-        const A_next = p.sigma_A * S_T;
-        const K_next = p.K_0 * Math.exp(-p.phi * D_T);
-        if (Math.abs(A_next - A_t) < 1e-10 && Math.abs(K_next - K_t) < 1e-10) break;
-        A_t = A_next;
-        K_t = K_next;
-      }
-      S_bar = endVals.S_T;
-      this.u_P = oldUP;
+    // 1) Parasitoid-free fixed point of the annual map -> season-start host S(0).
+    let A_t = p.K_0 * 0.5;
+    let K_t = p.K_0;
+    let S0 = p.R_B * A_t / (1.0 + A_t / Math.max(K_t, 1e-12));
+    for (let i = 0; i < 300; i++) {
+      S0 = p.R_B * A_t / (1.0 + A_t / Math.max(K_t, 1e-12));
+      const res = this.integrateSeason(S0, 0.0, 0.0, 0.0);
+      const S_T = res.endVals.S_T;
+      const D_T = res.endVals.D_T;
+      const A_next = p.sigma_A * S_T;
+      const K_next = p.K_0 * Math.exp(-p.phi * D_T);
+      const done = Math.abs(A_next - A_t) < 1e-12 && Math.abs(K_next - K_t) < 1e-12;
+      A_t = A_next; K_t = K_next;
+      if (done) break;
     }
+    S0 = p.R_B * A_t / (1.0 + A_t / Math.max(K_t, 1e-12));
+    this.u_P = savedUP;
 
-    return (p.beta * p.eta * p.delta * p.sigma_F) /
-           ((1.0 + p.h * S_bar) * p.mu_F * (p.mu_I + p.delta));
+    // 2) Integrate host S(tau) together with the variational states (dI, dF),
+    //    initialised at [dI, dF] = [0, 1], over [0, T] via RK4.
+    //    dS/dtau  = -c_B B_t S/(1+a_B S) - (mu_S+u_C) S        (F = 0)
+    //    d(dI)/dtau =  a(S) dF - b(S) dI,  a = beta S/(1+h S)
+    //    d(dF)/dtau =  eta delta dI - mu_F dF,  b = mu_I+delta+u_C + c_B B_t/(1+a_B S)
+    const rhs = (yv) => {
+      const S = Math.max(yv[0], 0.0);
+      const dIv = yv[1];
+      const dFv = yv[2];
+      const birdSat = 1.0 + p.a_B * S;
+      const dS = -p.c_B * B_t * S / birdSat - (p.mu_S + uC) * S;
+      const a = p.beta * S / (1.0 + p.h * S);
+      const b = p.mu_I + p.delta + uC + p.c_B * B_t / birdSat;
+      return [dS, a * dFv - b * dIv, p.eta * p.delta * dIv - p.mu_F * dFv];
+    };
+
+    const T = p.T;
+    const n = Math.max(1, Math.ceil(T / 0.1));
+    const dt = T / n;
+    let y = [S0, 0.0, 1.0];
+    for (let i = 0; i < n; i++) {
+      const k1 = rhs(y);
+      const y2 = [y[0] + 0.5 * dt * k1[0], y[1] + 0.5 * dt * k1[1], y[2] + 0.5 * dt * k1[2]];
+      const k2 = rhs(y2);
+      const y3 = [y[0] + 0.5 * dt * k2[0], y[1] + 0.5 * dt * k2[1], y[2] + 0.5 * dt * k2[2]];
+      const k3 = rhs(y3);
+      const y4 = [y[0] + dt * k3[0], y[1] + dt * k3[1], y[2] + dt * k3[2]];
+      const k4 = rhs(y4);
+      y = [
+        y[0] + (dt / 6) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]),
+        y[1] + (dt / 6) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]),
+        y[2] + (dt / 6) * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2])
+      ];
+    }
+    return p.sigma_F * y[2];               // R_P = sigma_F * dF(T)
   }
 
   /**
-   * Compute resistance R1 (Section 2.4, Eq. R1).
-   * R1 = (x_ref - x_max_dev) / x_ref
+   * Resistance R1 (§2.4). System variable: cumulative defoliation D;
+   * reference S_R = D* (equilibrium defoliation).
+   *   R1 = 1 - 2|S_R - S_X| / (S_R + |S_R - S_X|)
+   * where S_X is D at maximum deviation after a +/-20% pulse displacement of A*.
+   * R1 = 1: no deviation; R1 = 0: deviation equal to the reference.
    */
   computeR1(A_star, F_star, K_star, D_star, perturbationFrac, nYears) {
     perturbationFrac = perturbationFrac || 0.2;
     nYears = nYears || 50;
-    if (A_star < 1e-12) return NaN;
+    if (!(A_star > 1e-12)) return NaN;
 
-    const A0 = A_star * (1.0 + perturbationFrac);
+    const SR = D_star;                                   // reference: equilibrium defoliation
+    const A0 = A_star * (1.0 + perturbationFrac);        // standardized pulse on A
     const sim = this.simulate(A0, F_star, K_star, D_star, nYears, false);
 
-    let maxDev = 0;
+    let SX = SR, maxDev = -1;
     for (let i = 0; i <= nYears; i++) {
-      maxDev = Math.max(maxDev, Math.abs(sim.A[i] - A_star));
+      const dev = Math.abs(sim.D[i] - SR);
+      if (dev > maxDev) { maxDev = dev; SX = sim.D[i]; }
     }
-    const R1 = (A_star - maxDev) / A_star;
+    const denom = SR + Math.abs(SR - SX);
+    if (denom < 1e-12) return 1.0;
+    const R1 = 1.0 - 2.0 * Math.abs(SR - SX) / denom;
     return Math.max(-1, Math.min(1, R1));
   }
 
   /**
-   * Compute resilience R2 (Section 2.4, Eq. R2).
-   * R2 = (x_max_dev - x_Y) / x_max_dev
+   * Resilience R2 (§2.4). System variable: carrying capacity K;
+   * reference S_R = K* (equilibrium capacity).
+   *   R2 = 2|S_R - S_0| / (|S_R - S_0| + |S_R - S_Y|) - 1
+   * where S_0 is K at maximum deviation after the +/-20% pulse on A*, and S_Y is
+   * K after Y = 5 annual cycles from that point. R2 = 1: full recovery; 0: none.
    */
   computeR2(A_star, F_star, K_star, D_star, perturbationFrac, Y, nYears) {
     perturbationFrac = perturbationFrac || 0.2;
     Y = Y || 5;
     nYears = nYears || 50;
-    if (A_star < 1e-12) return NaN;
+    if (!(A_star > 1e-12)) return NaN;
 
+    const SR = K_star;                                   // reference: equilibrium capacity
     const A0 = A_star * (1.0 + perturbationFrac);
     const sim = this.simulate(A0, F_star, K_star, D_star, nYears, false);
 
-    let maxDev = 0, maxDevIdx = 0;
+    let maxDev = -1, maxIdx = 0;
     for (let i = 0; i <= nYears; i++) {
-      const dev = Math.abs(sim.A[i] - A_star);
-      if (dev > maxDev) { maxDev = dev; maxDevIdx = i; }
+      const dev = Math.abs(sim.K[i] - SR);
+      if (dev > maxDev) { maxDev = dev; maxIdx = i; }
     }
-
-    if (maxDev < 1e-12) return 1.0;
-
-    const yIdx = Math.min(maxDevIdx + Y, nYears);
-    const xY = Math.abs(sim.A[yIdx] - A_star);
-    return (maxDev - xY) / maxDev;
+    const S0v = sim.K[maxIdx];                           // value at maximum deviation
+    const yIdx = Math.min(maxIdx + Y, nYears);
+    const SYv = sim.K[yIdx];                             // value Y cycles later
+    const d0 = Math.abs(SR - S0v);
+    const dY = Math.abs(SR - SYv);
+    if (d0 + dY < 1e-12) return 1.0;
+    const R2 = 2.0 * d0 / (d0 + dY) - 1.0;
+    return Math.max(-1, Math.min(1, R2));
   }
 
   /**
@@ -324,5 +386,66 @@ class AlderIPMSimModel {
       }
     }
     return latitude;
+  }
+
+  /**
+   * Dominant eigenvalue magnitude (spectral radius rho*) of the annual-map
+   * Jacobian at state (A,F,K,D). Used for local-asymptotic-stability tests
+   * (rho* < 1). QR iteration to real Schur form, then magnitudes are read from
+   * 1x1 (real) and 2x2 (complex-pair) diagonal blocks.
+   */
+  spectralRadius(A, F, K, D) {
+    let M;
+    try {
+      M = this.computeJacobian(A, F, K, D);
+    } catch (e) { return NaN; }
+    const n = 4;
+    for (let i = 0; i < n; i++)
+      for (let j = 0; j < n; j++)
+        if (!isFinite(M[i][j])) return NaN;
+
+    let Amat = M.map(r => r.slice());
+    for (let it = 0; it < 120; it++) {
+      const Q = Array.from({ length: n }, () => new Array(n).fill(0));
+      const R = Array.from({ length: n }, () => new Array(n).fill(0));
+      for (let j = 0; j < n; j++) {
+        const v = new Array(n);
+        for (let i = 0; i < n; i++) v[i] = Amat[i][j];
+        for (let k = 0; k < j; k++) {
+          let dot = 0; for (let i = 0; i < n; i++) dot += Q[i][k] * v[i];
+          R[k][j] = dot; for (let i = 0; i < n; i++) v[i] -= dot * Q[i][k];
+        }
+        let nrm = 0; for (let i = 0; i < n; i++) nrm += v[i] * v[i]; nrm = Math.sqrt(nrm);
+        R[j][j] = nrm;
+        if (nrm > 1e-14) for (let i = 0; i < n; i++) Q[i][j] = v[i] / nrm;
+      }
+      const nA = Array.from({ length: n }, () => new Array(n).fill(0));
+      for (let i = 0; i < n; i++)
+        for (let j = 0; j < n; j++) {
+          let s = 0; for (let k = 0; k < n; k++) s += R[i][k] * Q[k][j];
+          nA[i][j] = s;
+        }
+      Amat = nA;
+    }
+
+    let mx = 0, i = 0;
+    while (i < n) {
+      const sub = (i + 1 < n) ? Amat[i + 1][i] : 0;
+      if (Math.abs(sub) < 1e-8) {
+        mx = Math.max(mx, Math.abs(Amat[i][i]));
+        i += 1;
+      } else {
+        const a = Amat[i][i], b = Amat[i][i + 1], c = Amat[i + 1][i], d = Amat[i + 1][i + 1];
+        const tr = a + d, det = a * d - b * c, disc = tr * tr - 4 * det;
+        if (disc < 0) {
+          mx = Math.max(mx, Math.sqrt(Math.max(det, 0)));      // |complex pair| = sqrt(det)
+        } else {
+          const s = Math.sqrt(disc);
+          mx = Math.max(mx, Math.abs((tr + s) / 2), Math.abs((tr - s) / 2));
+        }
+        i += 2;
+      }
+    }
+    return mx;
   }
 }

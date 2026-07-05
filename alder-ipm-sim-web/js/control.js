@@ -30,9 +30,12 @@ class ControlComparator {
   /**
    * Compute the cost functional J with within-season integration (Eq. 9).
    *
-   * J = sum_{t=0}^{N-1} [ integral_0^T (w_D*D(tau) + w_S*S(tau)
-   *                        + c_P*u_P + c_C*u_C) dtau + w_T*D(T) ]
-   *     + c_B * u_B * N
+   * J = sum_{t=1}^{N} [ integral_0^T (w_D*D + w_S*S
+   *                        + (C_P/2)*u_P^2 + (C_C/2)*u_C^2) dtau
+   *                     + (C_B/2)*u_B^2 + w_T*D(T) ]
+   *
+   * Control costs are quadratic per Eq 9 (standard for the Pontryagin/FBSM
+   * formulation). Bird pressure enters through the model via Eq 7 (u_B).
    *
    * @param {Object} controls - { u_P, u_C, u_B }
    * @param {Object} config - { A0, F0, K0, D0, nYears }
@@ -52,13 +55,10 @@ class ControlComparator {
     } = config || {};
 
     const p = Object.assign({}, this.baseParams);
-    // Bird pressure: B_t = b_0 * (1 + rho * u_B) (Eq. 7)
-    const b0 = p.B_index;
-    p.B_index = b0 * (1.0 + p.rho * u_B);
-
     const model = new AlderIPMSimModel(p);
     model.u_C = u_C;
     model.u_P = u_P;
+    model.u_B = u_B;   // Eq 7 (B_t = B_index*(1 + xi*u_B)) is applied inside the model
 
     const effectiveK0 = K0 !== null ? K0 : model.params.K_0;
 
@@ -93,8 +93,9 @@ class ControlComparator {
           const S_next = Math.max(states[i + 1][0], 0);
           const D_next = states[i + 1][3];
 
-          const f_i = this.W_D * D_i + this.W_S * S_i + this.C_P * u_P + this.C_C * u_C;
-          const f_next = this.W_D * D_next + this.W_S * S_next + this.C_P * u_P + this.C_C * u_C;
+          const ctrl = 0.5 * this.C_P * u_P * u_P + 0.5 * this.C_C * u_C * u_C;   // Eq 9 quadratic
+          const f_i = this.W_D * D_i + this.W_S * S_i + ctrl;
+          const f_next = this.W_D * D_next + this.W_S * S_next + ctrl;
           seasonCost += 0.5 * dt * (f_i + f_next);
         }
         // Terminal cost: defoliation at end of season
@@ -104,8 +105,8 @@ class ControlComparator {
       }
     }
 
-    // Annual bird-habitat enhancement cost
-    totalCost += this.C_B * u_B * nY;
+    // Annual bird-habitat enhancement cost (Eq 9 quadratic): (C_B/2) u_B^2 per year
+    totalCost += 0.5 * this.C_B * u_B * u_B * nY;
 
     return {
       cost: totalCost,
@@ -130,6 +131,17 @@ class ControlComparator {
     const peakD = Math.max(...result.D);
 
     const p = this.baseParams;
+
+    // Feasibility = local asymptotic stability of the managed equilibrium
+    // (lexicographic rule, §2/Fig 8): rho* < 1. Evaluate the annual-map spectral
+    // radius at the converged state under this strategy's controls.
+    const sm = new AlderIPMSimModel(Object.assign({}, p));
+    sm.u_C = controls.u_C || 0;
+    sm.u_P = controls.u_P || 0;
+    sm.u_B = controls.u_B || 0;
+    const rhoStar = sm.spectralRadius(result.A[n - 1], result.F[n - 1], finalK, finalD);
+    const stable = isFinite(rhoStar) && rhoStar < 1.0;
+
     return {
       name,
       controls,
@@ -137,9 +149,12 @@ class ControlComparator {
       finalK,
       finalD,
       peakD,
+      rhoStar,
+      stable,
       dCritExceeded: peakD > p.D_crit,
       kBelowMin: finalK < p.K_min,
-      feasible: peakD <= p.D_crit && finalK >= p.K_min,
+      feasible: stable,                                             // paper's feasibility criterion
+      feasibleDamage: peakD <= p.D_crit && finalK >= p.K_min,       // retained diagnostic
       result
     };
   }
@@ -266,12 +281,10 @@ class ControlComparator {
     } = config || {};
 
     const p = Object.assign({}, this.baseParams);
-    const b0 = p.B_index;
-    p.B_index = b0 * (1.0 + p.rho * u_B);
-
     const model = new AlderIPMSimModel(p);
     model.u_C = u_C;
     model.u_P = u_P;
+    model.u_B = u_B;   // Eq 7 handled inside the model
 
     const effectiveK0 = K0 !== null ? K0 : model.params.K_0;
 
@@ -299,15 +312,15 @@ class ControlComparator {
       // Within-season cost integration via trapezoidal rule
       let seasonCostP = 0;
       let seasonCostC = 0;
-      const seasonCostB = this.C_B * u_B;
+      const seasonCostB = 0.5 * this.C_B * u_B * u_B;
 
       const sol = mapResult.withinSeasonSol;
       if (sol && sol.t.length > 1) {
         const times = sol.t;
         for (let i = 0; i < times.length - 1; i++) {
           const dt = times[i + 1] - times[i];
-          seasonCostP += dt * this.C_P * u_P;
-          seasonCostC += dt * this.C_C * u_C;
+          seasonCostP += dt * 0.5 * this.C_P * u_P * u_P;
+          seasonCostC += dt * 0.5 * this.C_C * u_C * u_C;
         }
       }
 

@@ -22,8 +22,8 @@ const PARAM_REGISTRY = {
     default: 0.00575,
     min: 0.001,
     max: 0.01,
-    unit: "days",
-    description: "Parasitoid handling time (time-limiting saturation parameter in Holling II response; represents search-and-oviposition time per host)",
+    unit: "ha/larva",
+    description: "Parasitoid saturation parameter (composite Holling II saturation term, the inverse of larval density per oviposition; not a handling time). Larger h -> saturation sets in at lower host density.",
     module: "within_season",
     category: "biotic_rate"
   },
@@ -44,8 +44,8 @@ const PARAM_REGISTRY = {
     default: 0.00651,
     min: 0.0001,
     max: 0.02,
-    unit: "days",
-    description: "Bird half-saturation parameter (Holling II; larval density at which bird predation reaches half its maximum)",
+    unit: "ha/larva",
+    description: "Bird half-saturation parameter (Holling II; total larval density (S+I) at which bird predation approaches half its maximum)",
     module: "within_season",
     category: "biotic_rate"
   },
