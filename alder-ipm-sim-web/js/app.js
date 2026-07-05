@@ -1224,10 +1224,19 @@ const App = {
 
     this.lastControlResults = strategies;
 
-    // Find best strategy
+    // Find best strategy: minimum J among feasible (rho* < 1) strategies
+    // (paper's lexicographic rule); fall back to global minimum J if none feasible.
+    const feasIdx = strategies
+      .map((s, i) => ({ s, i }))
+      .filter(o => (o.s.feasible !== undefined ? o.s.feasible : (!o.s.dCritExceeded && !o.s.kBelowMin)));
     let bestIdx = 0;
-    for (let i = 1; i < strategies.length; i++) {
-      if (strategies[i].J < strategies[bestIdx].J) bestIdx = i;
+    if (feasIdx.length > 0) {
+      bestIdx = feasIdx[0].i;
+      feasIdx.forEach(o => { if (o.s.J < strategies[bestIdx].J) bestIdx = o.i; });
+    } else {
+      for (let i = 1; i < strategies.length; i++) {
+        if (strategies[i].J < strategies[bestIdx].J) bestIdx = i;
+      }
     }
 
     // Results table
@@ -1239,15 +1248,17 @@ const App = {
       if (idx === bestIdx) tr.className = "ctrl-best-row";
 
       const ctrl = s.controls || {};
+      const rhoTxt = (s.rhoStar !== undefined && isFinite(s.rhoStar)) ? s.rhoStar.toFixed(3) : "n/a";
+      const isFeasible = (s.feasible !== undefined) ? s.feasible : (!s.dCritExceeded && !s.kBelowMin);
       let statusHTML;
-      if (s.dCritExceeded && s.kBelowMin) {
-        statusHTML = '<span class="status-badge status-collapse_risk">collapse risk</span>';
-      } else if (s.dCritExceeded) {
-        statusHTML = '<span class="status-badge status-defoliation_warning">D &gt; D_crit</span>';
-      } else if (s.kBelowMin) {
-        statusHTML = '<span class="status-badge status-defoliation_warning">K &lt; K_min</span>';
+      if (!isFeasible) {
+        statusHTML = '<span class="status-badge status-collapse_risk">infeasible (&rho;*=' + rhoTxt + ')</span>';
+      } else if (s.dCritExceeded || s.kBelowMin) {
+        const note = (s.dCritExceeded && s.kBelowMin) ? 'D&gt;D_crit, K&lt;K_min'
+                   : (s.dCritExceeded ? 'D&gt;D_crit' : 'K&lt;K_min');
+        statusHTML = '<span class="status-badge status-defoliation_warning">feasible* (&rho;*=' + rhoTxt + '; ' + note + ')</span>';
       } else {
-        statusHTML = '<span class="status-badge status-healthy">feasible</span>';
+        statusHTML = '<span class="status-badge status-healthy">feasible (&rho;*=' + rhoTxt + ')</span>';
       }
 
       tr.innerHTML =
@@ -1288,7 +1299,12 @@ const App = {
     strategies.forEach((s) => {
       const ctrl = s.controls || {};
       const nY = s.result ? s.result.A.length - 1 : config.nYears;
-      const controlCost = 2.0 * (ctrl.u_P || 0) * nY + 5.0 * (ctrl.u_C || 0) * nY + 3.0 * (ctrl.u_B || 0) * nY;
+      const Tseason = (comparator.baseParams && comparator.baseParams.T) ? comparator.baseParams.T : 1;
+      // Quadratic control cost (Eq 9), matching computeCostWithTrajectory:
+      // u_P, u_C integrated over the season (x T x years); u_B annual (x years).
+      const controlCost = 0.5 * comparator.C_P * Math.pow(ctrl.u_P || 0, 2) * Tseason * nY
+                        + 0.5 * comparator.C_C * Math.pow(ctrl.u_C || 0, 2) * Tseason * nY
+                        + 0.5 * comparator.C_B * Math.pow(ctrl.u_B || 0, 2) * nY;
       const runningCost = Math.max(0, s.J - controlCost);
       const tr = document.createElement("tr");
       tr.innerHTML =
@@ -1844,19 +1860,26 @@ const App = {
     // Section 5: Management
     let secMgmt = "<h2>5. Management Recommendation</h2>";
     if (this.lastControlResults && this.lastControlResults.length > 0) {
+      const lc = this.lastControlResults;
+      const feas = lc.map((s, i) => ({ s, i }))
+        .filter(o => (o.s.feasible !== undefined ? o.s.feasible : (!o.s.dCritExceeded && !o.s.kBelowMin)));
       let bestIdx = 0;
-      for (let i = 1; i < this.lastControlResults.length; i++) {
-        if (this.lastControlResults[i].J < this.lastControlResults[bestIdx].J) bestIdx = i;
+      if (feas.length > 0) {
+        bestIdx = feas[0].i;
+        feas.forEach(o => { if (o.s.J < lc[bestIdx].J) bestIdx = o.i; });
+      } else {
+        for (let i = 1; i < lc.length; i++) { if (lc[i].J < lc[bestIdx].J) bestIdx = i; }
       }
       const best = this.lastControlResults[bestIdx];
       secMgmt += `<div class="recommendation"><strong>Recommended:</strong> ${esc(best.name)} (cost J = ${best.J.toFixed(4)})</div>`;
 
-      secMgmt += '<table><thead><tr><th>Scenario</th><th>Cost (J)</th><th>u<sub>P</sub></th><th>u<sub>C</sub></th><th>u<sub>B</sub></th><th>D*</th><th>K*</th><th>Status</th></tr></thead><tbody>';
+      secMgmt += '<table><thead><tr><th>Scenario</th><th>Cost (J)</th><th>u<sub>P</sub></th><th>u<sub>C</sub></th><th>u<sub>B</sub></th><th>D*</th><th>K*</th><th>&rho;*</th><th>Status</th></tr></thead><tbody>';
       for (const s of this.lastControlResults) {
         const ctrl = s.controls || {};
-        const feasible = !s.dCritExceeded && !s.kBelowMin;
+        const feasible = (s.feasible !== undefined) ? s.feasible : (!s.dCritExceeded && !s.kBelowMin);
+        const rhoTxt = (s.rhoStar !== undefined && isFinite(s.rhoStar)) ? s.rhoStar.toFixed(4) : "n/a";
         const cls = feasible ? "stable" : "unstable";
-        secMgmt += `<tr class="${cls}"><td>${esc(s.name)}</td><td>${s.J.toFixed(4)}</td><td>${(ctrl.u_P||0).toFixed(4)}</td><td>${(ctrl.u_C||0).toFixed(4)}</td><td>${(ctrl.u_B||0).toFixed(4)}</td><td>${(s.finalD||0).toFixed(4)}</td><td>${(s.finalK||0).toFixed(4)}</td><td>${feasible?"Feasible":"Infeasible"}</td></tr>`;
+        secMgmt += `<tr class="${cls}"><td>${esc(s.name)}</td><td>${s.J.toFixed(4)}</td><td>${(ctrl.u_P||0).toFixed(4)}</td><td>${(ctrl.u_C||0).toFixed(4)}</td><td>${(ctrl.u_B||0).toFixed(4)}</td><td>${(s.finalD||0).toFixed(4)}</td><td>${(s.finalK||0).toFixed(4)}</td><td>${rhoTxt}</td><td>${feasible?"Feasible":"Infeasible"}</td></tr>`;
       }
       secMgmt += "</tbody></table>";
     } else {
@@ -1869,7 +1892,7 @@ const App = {
       const m = PARAM_REGISTRY[key];
       appendixRows += `<tr><td>${esc(m.symbol)}</td><td>${esc(key)}</td><td>[${m.min}, ${m.max}]</td><td>${esc(m.unit)}</td><td>${esc(m.description)}</td></tr>`;
     }
-    const secAppendix = `<h2>6. Technical Appendix</h2><h3>Model Equations</h3><p><strong>Within-season ODE system (Eqs. 1&ndash;4):</strong></p><pre>dS/dt = -(&beta; S F)/(1 + h S) - (c_B B S)/(1 + a_B S) - &mu;_S S\ndI/dt =  (&beta; S F)/(1 + h S) - &mu;_I I\ndF/dt =  &delta; &eta; I(t - &tau;) - &mu;_F F\ndD/dt =  &kappa; S</pre><p><strong>Annual map (Eqs. 5&ndash;8):</strong></p><pre>A(t+1) = R_B A(t) &sigma;_A exp(-A(t)/K(t))\nF(t+1) = &sigma;_F (F_end(t) + u_P)\nK(t+1) = K_0 (1 - &phi; D(t))\n&rho;(t) = spectral radius of the annual-map Jacobian</pre><h3>Full Parameter Reference</h3><table><thead><tr><th>Symbol</th><th>Name</th><th>Range</th><th>Unit</th><th>Description</th></tr></thead><tbody>${appendixRows}</tbody></table>`;
+    const secAppendix = `<h2>6. Technical Appendix</h2><h3>Model Equations</h3><p><strong>Within-season ODE system (Eqs. 1&ndash;4):</strong></p><pre>dS/d&tau; = -(&beta; S F)/(1 + h S) - (c_B B_t S)/(1 + a_B (S+I)) - (&mu;_S + u_C) S\ndI/d&tau; =  (&beta; S F)/(1 + h S) - (c_B B_t I)/(1 + a_B (S+I)) - (&mu;_I + &delta; + u_C) I\ndF/d&tau; =  &eta; &delta; I - &mu;_F F + u_P\ndD/d&tau; =  &kappa; (S + I)</pre><p><strong>Annual map (Eqs. 5&ndash;8):</strong></p><pre>S(0)   = R_B A_t / (1 + A_t/K_t)   [Eq 5, Beverton&ndash;Holt; I(0)=0, F(0)=F_t]\nA(t+1) = &sigma;_A S(T)      F(t+1) = &sigma;_F F(T)   [Eq 6]\nB_t    = B_index (1 + &xi; u_B)   [Eq 7]\nK(t+1) = K_0 exp(-&phi; D_t)   [Eq 8]\n&rho;* = spectral radius of the annual-map Jacobian (stability)</pre><h3>Full Parameter Reference</h3><table><thead><tr><th>Symbol</th><th>Name</th><th>Range</th><th>Unit</th><th>Description</th></tr></thead><tbody>${appendixRows}</tbody></table>`;
 
     const body = secParams + secSim + secEq + secEWS + secMgmt + secAppendix;
 
