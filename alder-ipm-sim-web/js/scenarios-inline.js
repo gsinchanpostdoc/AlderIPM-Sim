@@ -21,12 +21,41 @@
   'use strict';
 
   const LS_KEY = 'alderipmsim-custom-scenarios';
+  // Bumped when the seed set changes; guarantees we seed only once per version
+  // and never overwrite scenarios the user has created or edited.
+  const SEED_FLAG = 'alderipmsim-scenarios-seeded-v1';
 
   function loadSaved() {
     try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); }
     catch (e) { return {}; }
   }
   function saveAll(map) { localStorage.setItem(LS_KEY, JSON.stringify(map)); }
+
+  // Pre-load a small set of editable, saveable default scenarios on first run.
+  // Each is a complete, self-contained parameter set (calibrated baseline plus
+  // the phenological shift named in the title), so the "My scenarios" list is
+  // populated out of the box. The user can load any of these, adjust the
+  // sliders, and re-save. We never touch an existing store, and the flag stops
+  // re-seeding after a user deletes them intentionally.
+  function seedDefaultsIfEmpty() {
+    try {
+      if (localStorage.getItem(SEED_FLAG)) return;
+      const saved = loadSaved();
+      if (Object.keys(saved).length === 0 && typeof getDefaults === 'function') {
+        const base = getDefaults();
+        const now = new Date().toISOString();
+        const mk = (o) => ({ created: now, seeded: true, params: Object.assign({}, base, o) });
+        saveAll({
+          '1. Baseline (calibrated)':            mk({}),
+          '2. Warming climate (long season)':    mk({ T: 65, sigma_A: 0.85, sigma_F: 0.52 }),
+          '3. Mild winter (high survival)':      mk({ sigma_A: 0.88, sigma_F: 0.60 }),
+          '4. High passerine bird pressure':     mk({ B_index: 1.9, c_B: 0.028 }),
+          '5. Weak biocontrol (low parasitism)': mk({ beta: 0.008, eta: 0.55, delta: 0.10 })
+        });
+      }
+      localStorage.setItem(SEED_FLAG, '1');
+    } catch (e) { /* localStorage unavailable — non-fatal */ }
+  }
 
   function refreshSelect() {
     const sel = document.getElementById('my-scenario-select');
@@ -66,6 +95,7 @@
 
   // ─────────────────────────────── Save / Load / Delete ──
   function wire() {
+    seedDefaultsIfEmpty();
     refreshSelect();
 
     const btnSave = document.getElementById('btn-scenario-save');
