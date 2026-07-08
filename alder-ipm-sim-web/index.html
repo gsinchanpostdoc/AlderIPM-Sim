@@ -47,7 +47,8 @@
 
 <!-- Top-level tab bar -->
 <nav class="main-tabs" role="tablist" aria-label="Main navigation tabs">
-  <button class="main-tab active" data-tab="tab-parameters" role="tab" aria-selected="true" aria-controls="tab-parameters" tabindex="0">Parameters</button>
+  <button class="main-tab active" data-tab="tab-dashboard" role="tab" aria-selected="true" aria-controls="tab-dashboard" tabindex="0">Dashboard</button>
+  <button class="main-tab" data-tab="tab-parameters" role="tab" aria-selected="false" aria-controls="tab-parameters" tabindex="-1">Parameters</button>
   <button class="main-tab" data-tab="tab-simulation" role="tab" aria-selected="false" aria-controls="tab-simulation" tabindex="-1">Simulation</button>
   <button class="main-tab" data-tab="tab-equilibrium" role="tab" aria-selected="false" aria-controls="tab-equilibrium" tabindex="-1">Equilibrium</button>
   <button class="main-tab" data-tab="tab-bifurcation" role="tab" aria-selected="false" aria-controls="tab-bifurcation" tabindex="-1">Bifurcation</button>
@@ -106,7 +107,11 @@
 </div>
 
 <!-- ══════════════ Tab 1: Parameters ══════════════ -->
-<section id="tab-parameters" class="tab-content active" role="tabpanel" aria-labelledby="tab-parameters-tab">
+<section id="tab-dashboard" class="tab-content active" role="tabpanel" aria-labelledby="tab-dashboard-tab">
+  <p class="eq-hint" style="padding:1rem;">Loading dashboard&hellip;</p>
+</section>
+
+<section id="tab-parameters" class="tab-content" role="tabpanel" aria-labelledby="tab-parameters-tab">
 
   <!-- Inline Scenarios workbench (preset picker + custom scenario manager + compare) -->
   <div class="scenarios-bar" id="scenarios-bar">
@@ -1029,6 +1034,7 @@ K(t+1) = K_0&middot;exp(-&phi;&middot;D_t)                                      
 <script src="js/wiring.js"></script>
 <script src="js/friendly.js"></script>
 <script src="js/scenarios-inline.js"></script>
+<script src="js/cockpit.js"></script>
 <script src="js/health.js"></script>
 
 </body>
