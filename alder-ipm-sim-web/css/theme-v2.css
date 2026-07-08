@@ -1,0 +1,228 @@
+/* ============================================================
+   AlderIPM-Sim — Visual Foundation (Block 3)
+   Layered AFTER css/style.css. This sheet only restyles: it
+   redefines the design tokens toward an earthy alder-forest
+   identity, adds the Cabinet Grotesk / Satoshi type system, a
+   Klimt-gold "leaf-edge" signature, bento cards, and polished
+   micro-interactions. No markup or scientific logic is touched;
+   the app already consumes var(--token), so redefining the
+   tokens cascades the new identity everywhere.
+   ============================================================ */
+
+/* ---- 1. Design tokens — light (earthy, warm, gold signature) ---- */
+:root {
+  /* surfaces: warm paper-green forest neutrals */
+  --bg:            #edf1e7;
+  --surface:       #fbfcf8;
+  --surface-alt:   #f1f5ea;
+  --border:        #d4ddc7;
+  --text:          #16251a;
+  --text-muted:    #55684f;
+  --text-contrast: #0b1710;
+
+  /* canopy greens */
+  --primary:       #2f6b4f;
+  --primary-light: #4a9d74;
+  --primary-dark:  #163120;
+  --accent:        #3f9e78;   /* interactive green (focus, highlights) */
+
+  /* signature + secondary accents */
+  --gold:          #c2922f;   /* Klimt gold leaf — the signature accent */
+  --gold-soft:     #e7c66b;
+  --teal:          #0d8b8f;   /* Meigenia parasitoid teal */
+
+  /* seasonal / status semantics (reused by later blocks: ring, canopy) */
+  --danger:          #b01722;  /* regime-shift red */
+  --warning:         #cf9418;  /* defoliation amber */
+  --success:         #1f8a44;
+  --info:            #0a7fb0;
+  --canopy-healthy:  #3f9e78;
+  --canopy-stress:   #cf9418;
+  --canopy-collapse: #8a8f86;
+
+  /* shape + depth (bento) */
+  --radius:    14px;
+  --radius-sm:  9px;
+  --radius-lg: 20px;
+  --shadow:       0 1px 2px rgba(22,37,26,.06), 0 4px 14px rgba(22,37,26,.07);
+  --shadow-lg:    0 2px 6px rgba(22,37,26,.08), 0 12px 30px rgba(22,37,26,.12);
+  --shadow-hover: 0 4px 10px rgba(22,37,26,.10), 0 18px 40px rgba(22,37,26,.16);
+  --transition: 0.22s cubic-bezier(.22,.61,.36,1);
+
+  /* type */
+  --font-display: "Cabinet Grotesk", "Satoshi", system-ui, -apple-system, sans-serif;
+  --font-body:    "Satoshi", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --header-bg: linear-gradient(135deg, #12301d 0%, #1d4a2e 55%, #2f6b4f 100%);
+}
+
+/* ---- 2. Design tokens — dark (slate forest; gold pops brighter) ---- */
+[data-theme="dark"] {
+  --bg:            #0f150e;
+  --surface:       #18211a;
+  --surface-alt:   #1f2a20;
+  --border:        #33422f;
+  --text:          #d8e3d3;
+  --text-muted:    #8ba586;
+  --text-contrast: #eaf2e6;
+
+  --primary:       #46a079;
+  --primary-light: #6fc79e;
+  --primary-dark:  #2f6b4f;
+  --accent:        #57c397;
+
+  --gold:          #d9b45c;   /* Klimt-on-slate: brighter gold */
+  --gold-soft:     #f0d488;
+  --teal:          #2bb7bb;
+
+  --danger:          #e2606c;
+  --warning:         #edc24a;
+  --success:         #57c397;
+  --info:            #4fb0e0;
+  --canopy-healthy:  #57c397;
+  --canopy-stress:   #edc24a;
+  --canopy-collapse: #7c837a;
+
+  --shadow:       0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.45);
+  --shadow-lg:    0 3px 8px rgba(0,0,0,.5), 0 16px 36px rgba(0,0,0,.55);
+  --shadow-hover: 0 4px 12px rgba(0,0,0,.55), 0 22px 46px rgba(0,0,0,.6);
+
+  --header-bg: linear-gradient(135deg, #0a1a10 0%, #0f2417 55%, #16331f 100%);
+}
+
+/* ---- 3. Typography ---- */
+body {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.01em; }
+h1 { font-weight: 800; letter-spacing: -0.02em; }
+h2, h3 { font-weight: 700; }
+header h1 { font-size: 1.55rem; letter-spacing: -0.02em; line-height: 1.08; }
+header .subtitle { font-family: var(--font-body); letter-spacing: 0; }
+.main-tab { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.005em; }
+/* numeric emphasis, where such classes exist, reads better in the display face */
+.stat-value, .metric-value, .big-number, .kpi-value { font-family: var(--font-display); font-weight: 800; }
+
+/* ---- 4. Header — gold hairline signature at the base ---- */
+header { border-bottom: 2px solid var(--gold); }
+
+/* ---- 5. Bento cards — defined edge, lift, gold hover hint ---- */
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-hover);
+  border-color: color-mix(in srgb, var(--gold) 45%, var(--border));
+}
+/* opt-in "gold leaf" edge for feature/summary cards (used by later blocks) */
+.card-feature { border-top: 2.5px solid var(--gold); }
+
+/* ---- 6. Tabs — recolour the existing active indicator to gold ---- */
+.main-tab:hover { border-bottom-color: color-mix(in srgb, var(--gold) 45%, transparent); }
+.main-tab.active { border-bottom-color: var(--gold); }
+
+/* ---- 7. Buttons — subtle lift + shadow micro-interaction ---- */
+.btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  transition: transform var(--transition), box-shadow var(--transition), background var(--transition), color var(--transition), border-color var(--transition);
+}
+.btn:hover  { transform: translateY(-2px); box-shadow: var(--shadow); }
+.btn:active { transform: translateY(0); }
+.btn-primary        { background: var(--primary); }
+.btn-primary:hover  { background: var(--primary-light); }
+/* the single inline-styled report button -> align to the palette + type */
+#btn-generate-report {
+  background: var(--primary-light) !important;
+  border-radius: var(--radius-sm) !important;
+  font-family: var(--font-body) !important;
+  font-weight: 600 !important;
+}
+/* header toggles get the gold-hover treatment */
+.theme-toggle, .btn-audience { transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition); }
+.theme-toggle:hover, .btn-audience:hover { transform: translateY(-2px); border-color: var(--gold); }
+
+/* ---- 8. Sliders — teal (Meigenia) accent + feedback ---- */
+input[type="range"]        { accent-color: var(--teal); cursor: pointer; }
+input[type="range"]:hover  { accent-color: var(--primary); }
+
+/* ---- 9. Section dividers echo the gold signature ---- */
+.section-divider, hr.section-divider {
+  border: none; height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--gold) 55%, transparent), transparent);
+}
+
+/* ---- 10. Status badges — pill shape, body face ---- */
+.status-badge { border-radius: 999px; font-family: var(--font-body); font-weight: 600; letter-spacing: .01em; }
+
+/* ---- 11. Tooltip polish (where such elements exist) ---- */
+.tooltip, .tip-bubble, .help-tip { border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); font-family: var(--font-body); }
+
+/* ---- 12. Mobile responsiveness (quality floor) ---- */
+@media (max-width: 720px) {
+  header { padding: 0.85rem 1rem; }
+  header .header-inner { flex-wrap: wrap; gap: 8px; }
+  .header-actions { flex-wrap: wrap; gap: 6px; }
+  header h1 { font-size: 1.25rem; }
+  .tab-content { padding: 1rem; }
+  .card { border-radius: var(--radius-sm); }
+}
+
+/* ---- 13. Respect reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .card:hover, .btn:hover, .theme-toggle:hover, .btn-audience:hover { transform: none; }
+}
+
+/* ============================================================
+   Block 4 — persistent Forest Health panel (ring + canopy)
+   ============================================================ */
+.health-bar {
+  display: flex; align-items: center; gap: 1.5rem;
+  max-width: 1400px; margin: 0 auto; padding: 1rem 2rem;
+  flex-wrap: wrap;
+}
+.health-ring-wrap { flex-shrink: 0; }
+.health-ring-track { stroke: var(--border); }
+.health-ring-arc  { transition: stroke-dashoffset .6s cubic-bezier(.22,.61,.36,1), stroke .35s ease; }
+.health-ring-pct  { font-family: var(--font-display); font-weight: 800; font-size: 30px; fill: var(--primary); }
+
+.health-meta   { display: flex; flex-direction: column; gap: 2px; min-width: 210px; }
+.health-title  { font-family: var(--font-display); font-weight: 700; font-size: 1.08rem; color: var(--text); display: flex; align-items: center; gap: .5rem; }
+.health-status { font-family: var(--font-body); font-weight: 600; font-size: .72rem; padding: 2px 10px; border-radius: 999px; letter-spacing: .02em; }
+.hs-ok   { background: color-mix(in srgb, var(--canopy-healthy) 18%, transparent); color: var(--canopy-healthy); }
+.hs-warn { background: color-mix(in srgb, var(--warning) 22%, transparent);       color: var(--warning); }
+.hs-bad  { background: color-mix(in srgb, var(--danger) 18%, transparent);        color: var(--danger); }
+.health-sub    { font-size: .78rem; color: var(--text-muted); }
+.health-stats  { display: flex; gap: 1.5rem; margin-top: 5px; }
+.hstat         { display: flex; flex-direction: column; }
+.hstat-label   { font-size: .66rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.hstat-val     { font-family: var(--font-display); font-weight: 700; font-size: 1rem; color: var(--text); }
+
+.canopy-wrap    { display: flex; flex-direction: column; align-items: center; gap: 3px; margin-left: auto; }
+.canopy-svg circle    { transition: fill .45s ease, opacity .45s ease; }
+.canopy-dcrit-ring    { transition: opacity .35s ease; }
+.canopy-caption { font-size: .68rem; color: var(--text-muted); letter-spacing: .02em; }
+
+/* Deterioration cue: shift the page toward amber when health drops below 40% */
+body { transition: background-color .6s ease; }
+body.health-critical                       { --bg: #f4e7cb; }
+[data-theme="dark"] body.health-critical   { --bg: #2b2413; }
+
+@media (max-width: 720px) {
+  .health-bar  { padding: .8rem 1rem; gap: 1rem; }
+  .canopy-wrap { margin-left: 0; }
+  .health-meta { min-width: 150px; }
+  .health-ring-pct { font-size: 26px; }
+}
