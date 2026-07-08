@@ -275,3 +275,34 @@ body.health-critical                       { --bg: #f4e7cb; }
 @media (prefers-reduced-motion: reduce) {
   .ckpt-chart-card.ckpt-breach { animation: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--canopy-stress) 70%, transparent); }
 }
+
+/* ============================================================
+   Science Mode live panel + parameter accordion (Block 6)
+   ============================================================ */
+/* Shown only in Full (Science) mode */
+#science-live-panel { display: none; margin-bottom: 1rem; }
+body[data-audience="full"] #science-live-panel { display: block; }
+
+.sci-panel { padding: .9rem 1rem; }
+.sci-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: .8rem; }
+.sci-title { font-family: var(--font-display, "Cabinet Grotesk", sans-serif); font-weight: 800; font-size: 1.1rem; color: var(--text-contrast); }
+.sci-sub { font-size: var(--font-xs, .8rem); color: var(--text-muted); max-width: 60ch; }
+.sci-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 1rem; align-items: center; }
+@media (max-width: 820px) { .sci-grid { grid-template-columns: 1fr; } }
+
+.sci-tip { padding: .2rem .2rem; }
+.sci-tip-head { font-weight: 600; color: var(--text-contrast); margin-bottom: .5rem; }
+.sci-tip-val { font-family: var(--font-display, sans-serif); font-weight: 800; margin-left: .4rem; }
+.sci-tip-track { position: relative; height: 14px; border-radius: 999px; background: var(--surface-alt); border: 1px solid var(--border); overflow: hidden; }
+.sci-tip-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 999px; transition: width .4s cubic-bezier(.22,.61,.36,1), background .3s ease; }
+.sci-tip-unit { position: absolute; top: -3px; bottom: -3px; left: 66.67%; width: 2px; background: var(--danger); opacity: .85; }
+.sci-tip-scale { display: flex; justify-content: space-between; font-size: var(--font-xxs, .72rem); color: var(--text-muted); margin-top: .3rem; }
+.sci-tip-note { margin-top: .5rem; font-size: var(--font-sm, .85rem); color: var(--text-muted); line-height: 1.45; }
+
+/* Accordion on the parameter groups (both modes) */
+.param-group-header.acc-head { cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: .5rem; user-select: none; }
+.param-group-header.acc-head:hover { color: var(--primary); }
+.acc-chev { transition: transform var(--transition, .2s ease); color: var(--text-muted); font-size: .9rem; }
+.param-group.acc-collapsed .param-group-body { display: none; }
+.param-group.acc-collapsed .acc-chev { transform: rotate(-90deg); }
+@media (prefers-reduced-motion: reduce) { .acc-chev, .sci-tip-fill { transition: none; } }
