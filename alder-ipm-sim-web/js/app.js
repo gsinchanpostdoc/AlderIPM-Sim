@@ -1637,7 +1637,7 @@ const App = {
     document.getElementById("btn-ws-view").addEventListener("click", () => this.viewWithinSeason());
 
     // Equilibrium
-    document.getElementById("btn-compute-eq").addEventListener("click", () => this.computeEquilibria());
+    document.getElementById("btn-compute-eq").addEventListener("click", () => (window.Loading ? window.Loading.wrap("Computing equilibria\u2026", () => this.computeEquilibria()) : this.computeEquilibria()));
     document.getElementById("btn-export-eq-csv").addEventListener("click", () => this.exportEquilibriumCSV());
     document.getElementById("btn-export-eq-json").addEventListener("click", () => this.exportEquilibriumJSON());
 
@@ -1728,7 +1728,7 @@ const App = {
     document.getElementById("btn-run-lhs").addEventListener("click", () => this.runLHSPRCC());
 
     // Control Comparison
-    document.getElementById("btn-run-ctrl").addEventListener("click", () => this.runControlComparison());
+    document.getElementById("btn-run-ctrl").addEventListener("click", () => (window.Loading ? window.Loading.wrap("Comparing strategies\u2026", () => this.runControlComparison()) : this.runControlComparison()));
     document.getElementById("btn-export-ctrl-csv").addEventListener("click", () => this.exportControlCSV());
     document.getElementById("btn-export-ctrl-json").addEventListener("click", () => this.exportControlJSON());
 
@@ -1770,7 +1770,7 @@ const App = {
     // Scenario comparison
     document.getElementById("btn-save-scenario").addEventListener("click", () => this.saveScenario());
     document.getElementById("btn-clear-scenarios").addEventListener("click", () => this.clearScenarios());
-    document.getElementById("btn-run-compare").addEventListener("click", () => this.runScenarioComparison());
+    document.getElementById("btn-run-compare").addEventListener("click", () => (window.Loading ? window.Loading.wrap("Comparing scenarios\u2026", () => this.runScenarioComparison()) : this.runScenarioComparison()));
     document.getElementById("btn-run-sw1").addEventListener("click", () => this.runSweep1D());
   },
 
