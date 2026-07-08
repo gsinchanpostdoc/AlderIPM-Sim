@@ -306,3 +306,88 @@ body[data-audience="full"] #science-live-panel { display: block; }
 .param-group.acc-collapsed .param-group-body { display: none; }
 .param-group.acc-collapsed .acc-chev { transform: rotate(-90deg); }
 @media (prefers-reduced-motion: reduce) { .acc-chev, .sci-tip-fill { transition: none; } }
+
+/* ============================================================
+   Forest Steward Scenario (Block 7)
+   ============================================================ */
+.stw-wrap { max-width: 900px; margin: 0 auto; }
+.stw-kicker { font-size: var(--font-xs, .8rem); letter-spacing: .06em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: .4rem; }
+.stw-h { font-family: var(--font-display, "Cabinet Grotesk", sans-serif); font-weight: 800; font-size: 1.7rem; color: var(--text-contrast); margin: 0 0 .3rem; }
+.stw-phen { color: var(--text-muted); font-weight: 600; margin-bottom: 1rem; }
+.stw-brief { padding: .9rem 1.1rem; margin-bottom: 1rem; border-top: 2.5px solid var(--gold); }
+.stw-facts { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: .35rem; color: var(--text); }
+.stw-facts li { line-height: 1.45; }
+.stw-lead { color: var(--text-muted); line-height: 1.55; max-width: 64ch; margin-bottom: 1.2rem; }
+.stw-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .4rem; }
+
+.stw-budget { padding: .85rem 1rem; margin-bottom: 1rem; }
+.stw-budget-head { display: flex; justify-content: space-between; font-weight: 600; color: var(--text-contrast); margin-bottom: .5rem; }
+.stw-budget-track { height: 16px; border-radius: 999px; background: var(--surface-alt); border: 1px solid var(--border); overflow: hidden; }
+.stw-budget-fill { height: 100%; width: 0; border-radius: 999px; background: var(--primary); transition: width .3s ease, background .3s ease; }
+.stw-budget-warn { color: var(--danger); font-size: var(--font-sm, .85rem); margin-top: .4rem; min-height: 1.1em; }
+
+.stw-alloc { padding: .6rem 1rem; margin-bottom: 1rem; display: flex; flex-direction: column; gap: .9rem; }
+.stw-ctrl { display: flex; flex-direction: column; gap: .4rem; }
+.stw-ctrl-lab { display: flex; gap: .6rem; align-items: center; }
+.stw-plain { font-size: var(--font-xs, .8rem); color: var(--text-muted); }
+
+.stw-run-grid { display: grid; grid-template-columns: auto 1fr; gap: 1rem; align-items: start; margin-bottom: 1rem; }
+@media (max-width: 720px) { .stw-run-grid { grid-template-columns: 1fr; } }
+.stw-ring-card { padding: 1rem; text-align: center; display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+.stw-ring-cap { color: var(--text-muted); font-size: var(--font-sm, .85rem); }
+.stw-ring-cap b { display: block; font-family: var(--font-display, sans-serif); font-size: 1.6rem; color: var(--text-contrast); }
+.stw-rp { font-size: var(--font-sm, .85rem); font-weight: 600; padding: .3rem .6rem; border-radius: 999px; }
+.stw-rp.cb-ok { color: var(--canopy-healthy); background: color-mix(in srgb, var(--canopy-healthy) 15%, transparent); }
+.stw-rp.cb-warn { color: var(--canopy-stress); background: color-mix(in srgb, var(--canopy-stress) 15%, transparent); }
+.stw-seasons { display: flex; flex-direction: column; gap: .5rem; }
+.stw-season { display: flex; justify-content: space-between; gap: .5rem; padding: .5rem .8rem; border-radius: var(--radius-sm, 8px); background: var(--surface-alt); border-left: 4px solid var(--primary); font-size: var(--font-sm, .85rem); }
+.stw-season.ok { border-left-color: var(--canopy-healthy); }
+.stw-season.warn { border-left-color: var(--canopy-stress); }
+.stw-season.bad { border-left-color: var(--danger); }
+.stw-season b { color: var(--text-contrast); }
+.stw-hint { color: var(--text-muted); font-style: italic; padding: .5rem; }
+
+.stw-timeline { display: flex; gap: .5rem; justify-content: center; margin: 1rem 0; }
+.stw-dot { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border); transition: all .3s ease; }
+.stw-dot.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.stw-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem; margin-bottom: 1rem; }
+@media (max-width: 720px) { .stw-metrics { grid-template-columns: 1fr; } }
+.stw-metric { padding: .8rem .9rem; }
+.stw-metric-t { font-size: var(--font-sm, .85rem); color: var(--text-muted); font-weight: 600; }
+.stw-metric-v { font-family: var(--font-display, sans-serif); font-weight: 800; font-size: 1.8rem; margin: .2rem 0; color: var(--text-contrast); }
+.stw-metric-v.v-ok { color: var(--canopy-healthy); }
+.stw-metric-v.v-warn { color: var(--canopy-stress); }
+.stw-metric-v.v-bad { color: var(--danger); }
+.stw-metric-bar { height: 8px; border-radius: 999px; background: var(--surface-alt); overflow: hidden; margin: .3rem 0; }
+.stw-metric-fill { height: 100%; border-radius: 999px; background: var(--primary); }
+.stw-metric-fill.f-ok { background: var(--canopy-healthy); }
+.stw-metric-fill.f-warn { background: var(--canopy-stress); }
+.stw-metric-fill.f-bad { background: var(--danger); }
+.stw-metric-n { font-size: var(--font-xs, .8rem); color: var(--text-muted); line-height: 1.4; }
+
+.stw-verdict { padding: .9rem 1.1rem; line-height: 1.5; margin-bottom: 1rem; }
+.stw-verdict.v-ok { border-left: 4px solid var(--canopy-healthy); }
+.stw-verdict.v-warn { border-left: 4px solid var(--canopy-stress); }
+.stw-verdict.v-bad { border-left: 4px solid var(--danger); }
+@media (prefers-reduced-motion: reduce) { .stw-budget-fill, .stw-dot, .stw-ring circle { transition: none !important; } }
+
+/* ============================================================
+   Loading indicator (Block 8)
+   ============================================================ */
+.app-loading {
+  position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+  z-index: 9999; display: flex; align-items: center; gap: .6rem;
+  padding: .55rem .95rem; border-radius: 999px;
+  background: var(--surface, #fff); color: var(--text-contrast, #111);
+  border: 1px solid var(--border, #ccc); box-shadow: var(--shadow-lg, 0 8px 24px rgba(0,0,0,.18));
+  font-size: var(--font-sm, .9rem); font-weight: 600;
+}
+.app-loading-spin {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2.5px solid color-mix(in srgb, var(--primary, #2f6b4f) 28%, transparent);
+  border-top-color: var(--primary, #2f6b4f);
+  animation: appspin .7s linear infinite;
+}
+@keyframes appspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .app-loading-spin { animation-duration: 2s; } }
