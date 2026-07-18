@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
   <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@700,800&f[]=satoshi@400,500,600,700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/theme-v2.css" />
+  <link rel="stylesheet" href="css/forest3d.css" />
   <link rel="stylesheet" href="css/print.css" media="print" />
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 </head>
@@ -47,7 +48,7 @@
 
 <!-- Top-level tab bar -->
 <nav class="main-tabs" role="tablist" aria-label="Main navigation tabs">
-  <button class="main-tab active" data-tab="tab-dashboard" role="tab" aria-selected="true" aria-controls="tab-dashboard" tabindex="0">Dashboard</button>
+  <button class="main-tab active" data-tab="tab-dashboard" role="tab" aria-selected="true" aria-controls="tab-dashboard" tabindex="0">Overview</button>
   <button class="main-tab" data-tab="tab-parameters" role="tab" aria-selected="false" aria-controls="tab-parameters" tabindex="-1">Parameters</button>
   <button class="main-tab" data-tab="tab-simulation" role="tab" aria-selected="false" aria-controls="tab-simulation" tabindex="-1">Simulation</button>
   <button class="main-tab" data-tab="tab-equilibrium" role="tab" aria-selected="false" aria-controls="tab-equilibrium" tabindex="-1">Equilibrium</button>
@@ -57,7 +58,6 @@
   <button class="main-tab" data-tab="tab-control" role="tab" aria-selected="false" aria-controls="tab-control" tabindex="-1">Control Comparison</button>
   <button class="main-tab" data-tab="tab-comparison" role="tab" aria-selected="false" aria-controls="tab-comparison" tabindex="-1">Scenario Comparison</button>
   <button class="main-tab" data-tab="tab-about" role="tab" aria-selected="false" aria-controls="tab-about" tabindex="-1">About / Help</button>
-  <button class="main-tab" data-tab="tab-steward" role="tab" aria-selected="false" aria-controls="tab-steward" tabindex="-1">Forest Steward</button>
 </nav>
 
 <div id="health-bar" class="health-bar" role="region" aria-label="Forest health summary">
@@ -108,8 +108,38 @@
 </div>
 
 <!-- ══════════════ Tab 1: Parameters ══════════════ -->
-<section id="tab-dashboard" class="tab-content active" role="tabpanel" aria-labelledby="tab-dashboard-tab">
-  <p class="eq-hint" style="padding:1rem;">Loading dashboard&hellip;</p>
+<section id="tab-dashboard" class="tab-content active" data-overview="1" role="tabpanel" aria-labelledby="tab-dashboard-tab">
+  <div class="ov-wrap">
+    <div class="ov-hero">
+      <h2>AlderIPM-Sim &mdash; adaptive stability of the Black alder ecoepidemic system</h2>
+      <p>An interactive companion to Ghosh &amp; Singh. A hybrid <b>seasonal&ndash;annual</b> model of the alluvial-forest ecoepidemic system &mdash; black alder <em>Alnus glutinosa</em>, the leaf beetle <em>Agelastica alni</em>, its larval endoparasitoid <em>Meigenia mutabilis</em>, and generalist passerine birds &mdash; used to map stability, detect regime shifts, and compare pest-management strategies under optimal control.</p>
+      <div class="ov-species">
+        <figure><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_glutinosa_002.jpg?width=200" alt="Alnus glutinosa" loading="lazy"><figcaption><b>Alnus glutinosa</b><span>Black alder &middot; canopy</span></figcaption></figure>
+        <figure><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Agelastica_alni_(aka).jpg?width=200" alt="Agelastica alni" loading="lazy"><figcaption><b>Agelastica alni</b><span>Alder leaf beetle &middot; A</span></figcaption></figure>
+        <figure><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Focus_stacking_Tachinid_fly.jpg?width=200" alt="Meigenia mutabilis (tachinid)" loading="lazy"><figcaption><b>Meigenia mutabilis</b><span>Parasitoid fly &middot; F</span></figcaption></figure>
+        <figure><img src="https://commons.wikimedia.org/wiki/Special:FilePath/A_tit_on_my_fatballs_(26251618102).jpg?width=200" alt="Passerine bird" loading="lazy"><figcaption><b>Passerine birds</b><span>Generalist predators &middot; B</span></figcaption></figure>
+      </div>
+      <button class="btn btn-primary ov-cta" onclick="document.querySelector('.main-tab[data-tab=tab-simulation]').click()">Open Model &amp; Simulation &rarr;</button>
+    </div>
+
+    <h3 class="ov-h">What each tab does</h3>
+    <div class="ov-grid">
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-simulation]').click()"><span class="ov-tag run">Run &amp; visualise</span><b>Model &amp; Simulation</b><p>Set every model parameter in the glass side panel, choose initial conditions, run the two-timescale simulation and watch the 3D forest respond &mdash; with live regime, &#8477;<sub>P</sub>, &rho;* and science/management interpretation.</p></button>
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-equilibrium]').click()"><span class="ov-tag o1">Objective 1 &middot; stable states</span><b>Equilibrium</b><p>Find fixed points of the annual map, classify local stability (&rho;* &lt; 1), and read resistance R1 &amp; resilience R2 with phase portraits.</p></button>
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-bifurcation]').click()"><span class="ov-tag o2">Objective 2 &middot; thresholds</span><b>Bifurcation</b><p>Sweep one or two parameters to trace equilibrium branches and the &#8477;<sub>P</sub> = 1 transcritical boundary between coexistence and the parasitoid-free regime.</p></button>
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-fitting]').click()"><span class="ov-tag cal">Calibration</span><b>Fitting</b><p>Calibrate parameters to your own multi-year field data by least squares, then classify the forecast regime for that stand.</p></button>
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-warnings]').click()"><span class="ov-tag o2">Objective 2 &middot; drivers</span><b>Early Warnings</b><p>Detect critical slowing down (variance, autocorrelation, spectral reddening) and rank the parameters driving instability with LHS-PRCC.</p></button>
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-control]').click()"><span class="ov-tag o3">Objective 3 &middot; management</span><b>Control Comparison</b><p>Compare strategies A/B/C on cost J and feasibility. Only fully integrated control reaches a stable managed equilibrium &mdash; at least cost.</p></button>
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-comparison]').click()"><span class="ov-tag sc">Scenarios</span><b>Scenario Comparison</b><p>Save parameter sets as named scenarios and compare their trajectories, metrics and 1-D sweeps side by side.</p></button>
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-about]').click()"><span class="ov-tag ref">Reference</span><b>About / Help</b><p>Model equations, the full parameter glossary, early-warning theory and references.</p></button>
+    </div>
+
+    <div class="ov-obj">
+      <div><span>O1</span><p>Which stable equilibria are most probable across phenological variation? <b>Parasitoid-free dominates; coexistence is rare.</b></p></div>
+      <div><span>O2</span><p>How likely is a shift out of coexistence, and what signals it? <b>81.5% under joint variation; T and R<sub>B</sub> lead.</b></p></div>
+      <div><span>O3</span><p>What is the minimal-effort management that prevents regime shift? <b>Early, fully integrated control.</b></p></div>
+    </div>
+  </div>
 </section>
 
 <section id="tab-parameters" class="tab-content" role="tabpanel" aria-labelledby="tab-parameters-tab">
@@ -1009,8 +1039,69 @@ K(t+1) = K_0&middot;exp(-&phi;&middot;D_t)                                      
   </div>
 </section>
 
-<section id="tab-steward" class="tab-content" role="tabpanel" aria-labelledby="tab-steward-tab">
-  <p class="eq-hint" style="padding:1rem;">Loading Forest Steward…</p>
+<!-- ══════════════ Tab: 3D Forest ══════════════ -->
+<section id="tab-forest3d" class="tab-content" role="tabpanel" aria-labelledby="tab-forest3d-tab">
+  <div class="f3d-wrap" id="f3d-wrap">
+    <canvas id="f3d-canvas"></canvas>
+    <div class="f3d-loading" id="f3d-loading">Loading 3D forest…</div>
+
+    <!-- top status: year · season phase · regime -->
+    <div class="f3d-top">
+      <div class="f3d-yr">Year <b id="f3d-year">0</b></div>
+      <div class="f3d-phase" id="f3d-phase">Spring flush</div>
+      <div class="f3d-regime" id="f3d-regime"><span class="f3d-dot"></span><span id="f3d-regime-txt">—</span></div>
+    </div>
+
+    <!-- controls panel -->
+    <div class="f3d-panel">
+      <div class="f3d-h">Two-timescale simulation</div>
+      <p class="f3d-note">The same model as this Simulation tab, in space. Press <b>Run Simulation</b> above (or <b>▶ Play</b>) to watch the experiment unfold; ecology follows the <b>Parameters</b> tab, initial conditions &amp; u<sub>C</sub>/u<sub>P</sub> follow the run.</p>
+      <div class="f3d-btns">
+        <button class="f3d-btn primary" id="f3d-play">▶ Play</button>
+        <button class="f3d-btn" id="f3d-step">+1 yr</button>
+        <button class="f3d-btn" id="f3d-settle">Settle</button>
+        <button class="f3d-btn" id="f3d-reset">Reset</button>
+      </div>
+      <div class="f3d-sub">Management strategies (Objective 3)</div>
+      <div class="f3d-chips" id="f3d-strats"></div>
+      <div class="f3d-ctls" id="f3d-ctls"></div>
+      <button class="f3d-btn wide" id="f3d-sync">↻ Sync from Parameters tab</button>
+    </div>
+
+    <!-- stability diagnostics + interpretation -->
+    <div class="f3d-metrics">
+      <div class="f3d-h">Stability diagnostics</div>
+      <div class="f3d-mrow"><span>Regime class</span><b id="f3d-mclass">—</b></div>
+      <div class="f3d-mrow"><span><i>ℛ</i><sub>P</sub> · parasitoid invasion</span><b id="f3d-mrp">—</b></div>
+      <div class="f3d-mrow"><span><i>ρ*</i> · spectral radius</span><b id="f3d-mrho">—</b></div>
+      <div class="f3d-mrow"><span>R1 · resistance</span><b id="f3d-mr1">—</b></div>
+      <div class="f3d-mrow"><span>R2 · resilience</span><b id="f3d-mr2">—</b></div>
+      <div class="f3d-mrow"><span><i>J</i> · cost proxy (25 yr)</span><b id="f3d-mj">—</b></div>
+      <div class="f3d-interp" id="f3d-interp">—</div>
+    </div>
+
+    <!-- legend: what each object means -->
+    <div class="f3d-legend">
+      <div class="f3d-h">What you are seeing</div>
+      <div class="f3d-lr"><i style="background:#3f7a2e"></i>Alder canopy — fullness = <em>K</em>, loss = <em>D</em></div>
+      <div class="f3d-lr"><i style="background:#8bbf3c"></i>Susceptible larvae <em>S</em>(τ)</div>
+      <div class="f3d-lr"><i style="background:#d98a3d"></i>Parasitised larvae <em>I</em>(τ) — epidemic core</div>
+      <div class="f3d-lr"><i style="background:#cdbf9c;border:1px solid #a89a78"></i>Parasitoid flies <em>F</em>(τ) · <em>M. mutabilis</em></div>
+      <div class="f3d-lr"><i style="background:#2f3a55"></i>Adult beetles <em>A</em><sub>t</sub> · <em>A. alni</em></div>
+      <div class="f3d-lr"><i style="background:#2c3138"></i>Passerine birds · pressure <em>B</em></div>
+    </div>
+
+    <!-- within-season chart -->
+    <div class="f3d-season">
+      <div class="f3d-h">Within season (τ, days)
+        <span class="f3d-leg"><i style="background:#8bbf3c"></i>S</span>
+        <span class="f3d-leg"><i style="background:#d98a3d"></i>I</span>
+        <span class="f3d-leg"><i style="background:#7a5ea8"></i>F</span>
+        <span class="f3d-leg"><i style="background:#c0392b"></i>D</span>
+      </div>
+      <canvas id="f3d-chart" width="620" height="150"></canvas>
+    </div>
+  </div>
 </section>
 
 <!-- ══════════════ Guided Tour Overlay ══════════════ -->
@@ -1042,8 +1133,15 @@ K(t+1) = K_0&middot;exp(-&phi;&middot;D_t)                                      
 <script src="js/scenarios-inline.js"></script>
 <script src="js/cockpit.js"></script>
 <script src="js/science.js"></script>
-<script src="js/steward.js"></script>
 <script src="js/health.js"></script>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module" src="js/forest3d.js"></script>
 
 </body>
 </html>
