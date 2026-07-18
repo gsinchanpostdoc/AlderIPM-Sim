@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlderIPM-Sim — Ecoepidemiological Model</title>
+  <meta name="description" content="Browser-based decision-support tool for managing Agelastica alni outbreaks in European alder forests." />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 4L18 24h8L16 40h10L20 56h24L38 40h10L36 24h8z' fill='%232d6a4f'/%3E%3Crect x='29' y='52' width='6' height='8' rx='1' fill='%235a3e2b'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
+  <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
+  <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@700,800&f[]=satoshi@400,500,600,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/theme-v2.css" />
+  <link rel="stylesheet" href="css/forest3d.css" />
+  <link rel="stylesheet" href="css/print.css" media="print" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <svg class="header-logo" viewBox="0 0 64 64" width="40" height="40" aria-hidden="true">
+      <path d="M32 4L18 24h8L16 40h10L20 56h24L38 40h10L36 24h8z" fill="#52b788"/>
+      <rect x="29" y="52" width="6" height="8" rx="1" fill="#c4a882"/>
+    </svg>
+    <div>
+      <h1>AlderIPM-Sim Web</h1>
+      <div class="subtitle">Alnus-beetle-parasitoid-bird ecoepidemic model &mdash; runs entirely in your browser</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-audience" id="btn-audience-mode" aria-label="Toggle between simple and full interface" title="Toggle between simple and full interface">
+        <span class="mode-dot mode-dot-simple"></span>Mode: Simple
+      </button>
+      <button class="btn btn-uselang btn-use-r" id="btn-use-r" aria-label="Show how to use AlderIPM-Sim in R" title="Install the R package and reproduce this analysis in R">
+        <span class="lang-tag">R</span> Use in R
+      </button>
+      <button class="btn btn-uselang btn-use-py" id="btn-use-py" aria-label="Show how to use AlderIPM-Sim in Python" title="Install the Python package and reproduce this analysis in Python">
+        <span class="lang-tag">Py</span> Use in Python
+      </button>
+      <button class="btn" id="btn-generate-report" aria-label="Generate HTML report" style="margin-right:8px; background:#40916c; color:#fff; border:none; padding:6px 14px; border-radius:4px; cursor:pointer; font-size:13px;">Generate Report</button>
+      <button class="theme-toggle" id="btn-theme-toggle" aria-label="Toggle dark mode">
+        <span class="theme-icon" id="theme-icon">&#9790;</span>
+        <span id="theme-label">Dark</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Top-level tab bar -->
+<nav class="main-tabs" role="tablist" aria-label="Main navigation tabs">
+  <button class="main-tab active" data-tab="tab-dashboard" role="tab" aria-selected="true" aria-controls="tab-dashboard" tabindex="0">Overview</button>
+  <button class="main-tab" data-tab="tab-parameters" role="tab" aria-selected="false" aria-controls="tab-parameters" tabindex="-1">Parameters</button>
+  <button class="main-tab" data-tab="tab-simulation" role="tab" aria-selected="false" aria-controls="tab-simulation" tabindex="-1">Simulation</button>
+  <button class="main-tab" data-tab="tab-equilibrium" role="tab" aria-selected="false" aria-controls="tab-equilibrium" tabindex="-1">Equilibrium</button>
+  <button class="main-tab" data-tab="tab-bifurcation" role="tab" aria-selected="false" aria-controls="tab-bifurcation" tabindex="-1">Bifurcation</button>
+  <button class="main-tab" data-tab="tab-fitting" role="tab" aria-selected="false" aria-controls="tab-fitting" tabindex="-1">Fitting</button>
+  <button class="main-tab" data-tab="tab-warnings" role="tab" aria-selected="false" aria-controls="tab-warnings" tabindex="-1">Early Warnings</button>
+  <button class="main-tab" data-tab="tab-control" role="tab" aria-selected="false" aria-controls="tab-control" tabindex="-1">Control Comparison</button>
+  <button class="main-tab" data-tab="tab-comparison" role="tab" aria-selected="false" aria-controls="tab-comparison" tabindex="-1">Scenario Comparison</button>
+  <button class="main-tab" data-tab="tab-about" role="tab" aria-selected="false" aria-controls="tab-about" tabindex="-1">About / Help</button>
+</nav>
+
+<div id="health-bar" class="health-bar" role="region" aria-label="Forest health summary">
+  <div class="health-ring-wrap">
+    <svg class="health-ring" viewBox="0 0 120 120" width="76" height="76" role="img" aria-labelledby="health-ring-title">
+      <title id="health-ring-title">Forest Health Index</title>
+      <circle class="health-ring-track" cx="60" cy="60" r="50" fill="none" stroke-width="11"/>
+      <circle id="health-ring-arc" class="health-ring-arc" cx="60" cy="60" r="50" fill="none"
+              stroke-width="11" stroke-linecap="round" stroke="#3f9e78"
+              stroke-dasharray="314.16" stroke-dashoffset="314.16"
+              transform="rotate(-90 60 60)"/>
+      <text id="health-ring-pct" class="health-ring-pct" x="60" y="70" text-anchor="middle">&mdash;</text>
+    </svg>
+  </div>
+  <div class="health-meta">
+    <div class="health-title">Forest Health <span id="health-status" class="health-status">&mdash;</span></div>
+    <div class="health-sub">Projected recurrent state &middot; H = K/K&#8320; &times; (1 &minus; D)</div>
+    <div class="health-stats">
+      <span class="hstat"><span class="hstat-label">Canopy capacity</span><span id="health-kpct" class="hstat-val">&mdash;</span></span>
+      <span class="hstat"><span class="hstat-label">Defoliation D</span><span id="health-dval" class="hstat-val">&mdash;</span></span>
+    </div>
+  </div>
+  <div class="canopy-wrap" title="Top-down canopy — browning tracks seasonal defoliation">
+    <svg class="canopy-svg" id="canopy-svg" viewBox="0 0 120 120" width="80" height="80" role="img" aria-labelledby="canopy-title">
+      <title id="canopy-title">Canopy defoliation</title>
+      <g id="canopy-leaves">
+        <circle cx="60" cy="40" r="17" fill="#3f9e78"/>
+        <circle cx="44" cy="50" r="15" fill="#3f9e78"/>
+        <circle cx="76" cy="50" r="15" fill="#3f9e78"/>
+        <circle cx="36" cy="66" r="14" fill="#3f9e78"/>
+        <circle cx="60" cy="58" r="19" fill="#3f9e78"/>
+        <circle cx="84" cy="66" r="14" fill="#3f9e78"/>
+        <circle cx="48" cy="80" r="15" fill="#3f9e78"/>
+        <circle cx="72" cy="80" r="15" fill="#3f9e78"/>
+        <circle cx="60" cy="32" r="12" fill="#3f9e78"/>
+        <circle cx="32" cy="58" r="11" fill="#3f9e78"/>
+        <circle cx="88" cy="58" r="11" fill="#3f9e78"/>
+        <circle cx="46" cy="38" r="11" fill="#3f9e78"/>
+        <circle cx="74" cy="38" r="11" fill="#3f9e78"/>
+        <circle cx="52" cy="70" r="13" fill="#3f9e78"/>
+        <circle cx="68" cy="70" r="13" fill="#3f9e78"/>
+        <circle cx="60" cy="86" r="12" fill="#3f9e78"/>
+      </g>
+      <circle id="canopy-dcrit-ring" class="canopy-dcrit-ring" cx="60" cy="60" r="56" fill="none" stroke="#b01722" stroke-width="3" style="opacity:0"/>
+    </svg>
+    <div class="canopy-caption" id="canopy-caption">Canopy</div>
+  </div>
+</div>
+
+<!-- ══════════════ Tab 1: Parameters ══════════════ -->
+<section id="tab-dashboard" class="tab-content active" data-overview="1" role="tabpanel" aria-labelledby="tab-dashboard-tab">
+  <div class="ov-wrap">
+    <div class="ov-hero">
+      <h2>AlderIPM-Sim &mdash; adaptive stability of the Black alder ecoepidemic system</h2>
+      <p>An interactive companion to Ghosh &amp; Singh. A hybrid <b>seasonal&ndash;annual</b> model of the alluvial-forest ecoepidemic system &mdash; black alder <em>Alnus glutinosa</em>, the leaf beetle <em>Agelastica alni</em>, its larval endoparasitoid <em>Meigenia mutabilis</em>, and generalist passerine birds &mdash; used to map stability, detect regime shifts, and compare pest-management strategies under optimal control.</p>
+      <div class="ov-species">
+        <figure><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Alnus_glutinosa_002.jpg?width=200" alt="Alnus glutinosa" loading="lazy"><figcaption><b>Alnus glutinosa</b><span>Black alder &middot; canopy</span></figcaption></figure>
+        <figure><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Agelastica_alni_(aka).jpg?width=200" alt="Agelastica alni" loading="lazy"><figcaption><b>Agelastica alni</b><span>Alder leaf beetle &middot; A</span></figcaption></figure>
+        <figure><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Focus_stacking_Tachinid_fly.jpg?width=200" alt="Meigenia mutabilis (tachinid)" loading="lazy"><figcaption><b>Meigenia mutabilis</b><span>Parasitoid fly &middot; F</span></figcaption></figure>
+        <figure><img src="https://commons.wikimedia.org/wiki/Special:FilePath/A_tit_on_my_fatballs_(26251618102).jpg?width=200" alt="Passerine bird" loading="lazy"><figcaption><b>Passerine birds</b><span>Generalist predators &middot; B</span></figcaption></figure>
+      </div>
+      <button class="btn btn-primary ov-cta" onclick="document.querySelector('.main-tab[data-tab=tab-simulation]').click()">Open Model &amp; Simulation &rarr;</button>
+    </div>
+
+    <h3 class="ov-h">What each tab does</h3>
+    <div class="ov-grid">
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-simulation]').click()"><span class="ov-tag run">Run &amp; visualise</span><b>Model &amp; Simulation</b><p>Set every model parameter in the glass side panel, choose initial conditions, run the two-timescale simulation and watch the 3D forest respond &mdash; with live regime, &#8477;<sub>P</sub>, &rho;* and science/management interpretation.</p></button>
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-equilibrium]').click()"><span class="ov-tag o1">Objective 1 &middot; stable states</span><b>Equilibrium</b><p>Find fixed points of the annual map, classify local stability (&rho;* &lt; 1), and read resistance R1 &amp; resilience R2 with phase portraits.</p></button>
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-bifurcation]').click()"><span class="ov-tag o2">Objective 2 &middot; thresholds</span><b>Bifurcation</b><p>Sweep one or two parameters to trace equilibrium branches and the &#8477;<sub>P</sub> = 1 transcritical boundary between coexistence and the parasitoid-free regime.</p></button>
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-fitting]').click()"><span class="ov-tag cal">Calibration</span><b>Fitting</b><p>Calibrate parameters to your own multi-year field data by least squares, then classify the forecast regime for that stand.</p></button>
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-warnings]').click()"><span class="ov-tag o2">Objective 2 &middot; drivers</span><b>Early Warnings</b><p>Detect critical slowing down (variance, autocorrelation, spectral reddening) and rank the parameters driving instability with LHS-PRCC.</p></button>
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-control]').click()"><span class="ov-tag o3">Objective 3 &middot; management</span><b>Control Comparison</b><p>Compare strategies A/B/C on cost J and feasibility. Only fully integrated control reaches a stable managed equilibrium &mdash; at least cost.</p></button>
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-comparison]').click()"><span class="ov-tag sc">Scenarios</span><b>Scenario Comparison</b><p>Save parameter sets as named scenarios and compare their trajectories, metrics and 1-D sweeps side by side.</p></button>
+      <button class="ov-card" onclick="document.querySelector('.main-tab[data-tab=tab-about]').click()"><span class="ov-tag ref">Reference</span><b>About / Help</b><p>Model equations, the full parameter glossary, early-warning theory and references.</p></button>
+    </div>
+
+    <div class="ov-obj">
+      <div><span>O1</span><p>Which stable equilibria are most probable across phenological variation? <b>Parasitoid-free dominates; coexistence is rare.</b></p></div>
+      <div><span>O2</span><p>How likely is a shift out of coexistence, and what signals it? <b>81.5% under joint variation; T and R<sub>B</sub> lead.</b></p></div>
+      <div><span>O3</span><p>What is the minimal-effort management that prevents regime shift? <b>Early, fully integrated control.</b></p></div>
+    </div>
+  </div>
+</section>
+
+<section id="tab-parameters" class="tab-content" role="tabpanel" aria-labelledby="tab-parameters-tab">
+
+  <!-- Inline Scenarios workbench (preset picker + custom scenario manager + compare) -->
+  <div class="scenarios-bar" id="scenarios-bar">
+    <div class="scenarios-col scenarios-col-preset">
+      <label class="scenarios-label" for="preset-select">Preset scenario</label>
+      <select id="preset-select" aria-label="Select a preset parameter scenario">
+        <option value="">(Custom)</option>
+      </select>
+    </div>
+
+    <div class="scenarios-col scenarios-col-mine">
+      <label class="scenarios-label" for="my-scenario-select">My scenarios</label>
+      <div class="scenarios-row">
+        <select id="my-scenario-select" aria-label="Load a saved scenario">
+          <option value="">(none)</option>
+        </select>
+        <button class="btn btn-sm btn-secondary" id="btn-scenario-load" type="button" title="Load the selected saved scenario">Load</button>
+        <button class="btn btn-sm btn-secondary" id="btn-scenario-delete" type="button" title="Delete the selected saved scenario">Delete</button>
+      </div>
+    </div>
+
+    <div class="scenarios-col scenarios-col-save">
+      <label class="scenarios-label" for="my-scenario-name">Save current as</label>
+      <div class="scenarios-row">
+        <input type="text" id="my-scenario-name" placeholder="e.g. warm_winter_bialowieza" maxlength="40" />
+        <button class="btn btn-sm btn-primary" id="btn-scenario-save" type="button">Save</button>
+      </div>
+    </div>
+
+    <div class="scenarios-col scenarios-col-compare">
+      <label class="scenarios-label">&nbsp;</label>
+      <div class="scenarios-row">
+        <button class="btn btn-sm btn-primary" id="btn-scenario-compare-inline" type="button" title="Compare all saved scenarios and the current parameters">Compare scenarios</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="preset-description-card" style="display:none; border-left:4px solid #0072B2; background:var(--surface); padding:12px 16px; border-radius:6px; margin-bottom:16px; font-size:13px;" role="status" aria-live="polite"></div>
+
+  <!-- Inline comparison result panel (rendered on demand) -->
+  <div id="inline-compare-panel" class="inline-compare-panel" style="display:none;"></div>
+
+  <div class="params-layout">
+
+    <div class="param-group" id="group-tree">
+      <div class="param-group-header">
+        <h3>Tree / Foliage</h3>
+        <button class="btn btn-sm btn-reset-group" data-group="tree" aria-label="Reset tree parameters to defaults">Reset Group</button>
+      </div>
+      <div class="param-group-body" id="sliders-tree"></div>
+    </div>
+
+    <div class="param-group" id="group-beetle">
+      <div class="param-group-header">
+        <h3>Beetle</h3>
+        <button class="btn btn-sm btn-reset-group" data-group="beetle" aria-label="Reset beetle parameters to defaults">Reset Group</button>
+      </div>
+      <div class="param-group-body" id="sliders-beetle"></div>
+    </div>
+
+    <div class="param-group" id="group-parasitoid">
+      <div class="param-group-header">
+        <h3>Parasitoid</h3>
+        <button class="btn btn-sm btn-reset-group" data-group="parasitoid" aria-label="Reset parasitoid parameters to defaults">Reset Group</button>
+      </div>
+      <div class="param-group-body" id="sliders-parasitoid"></div>
+    </div>
+
+    <div class="param-group" id="group-bird">
+      <div class="param-group-header">
+        <h3>Bird</h3>
+        <button class="btn btn-sm btn-reset-group" data-group="bird" aria-label="Reset bird parameters to defaults">Reset Group</button>
+      </div>
+      <div class="param-group-body" id="sliders-bird"></div>
+    </div>
+
+  </div>
+
+  <div class="params-actions">
+    <button class="btn btn-secondary" id="btn-reset-all" aria-label="Reset all parameters to defaults">Reset All to Defaults</button>
+    <button class="share-config-btn" id="btn-share-config" aria-label="Share current parameter configuration via URL">Share Configuration</button>
+  </div>
+</section>
+
+<!-- ══════════════ Tab 2: Simulation ══════════════ -->
+<section id="tab-simulation" class="tab-content" role="tabpanel" aria-labelledby="tab-simulation-tab">
+
+  <div class="sim-toolbar">
+    <div class="sim-control-row">
+      <label for="sim-years">Years (1&ndash;200):</label>
+      <input type="number" id="sim-years" value="50" min="1" max="200" step="1" aria-label="Number of simulation years" />
+
+      <label for="sim-A0">A(0):</label>
+      <input type="number" id="sim-A0" value="1.0" step="0.1" min="0" aria-label="Initial beetle density" />
+
+      <label for="sim-F0">F(0):</label>
+      <input type="number" id="sim-F0" value="0.5" step="0.1" min="0" aria-label="Initial parasitoid density" />
+
+      <label for="sim-D0">D(0):</label>
+      <input type="number" id="sim-D0" value="0.0" step="0.1" min="0" aria-label="Initial defoliation" />
+
+      <label for="sim-uC">u<sub>C</sub>:</label>
+      <input type="number" id="sim-uC" value="0.0" step="0.01" min="0" aria-label="Chemical control effort" />
+
+      <label for="sim-uP">u<sub>P</sub>:</label>
+      <input type="number" id="sim-uP" value="0.0" step="0.01" min="0" aria-label="Parasitoid augmentation effort" />
+    </div>
+
+    <div class="sim-btn-row">
+      <button class="btn btn-primary" id="btn-run-sim" aria-label="Run simulation">Run Simulation</button>
+      <button class="btn btn-secondary" id="btn-export-csv" aria-label="Export simulation as CSV">Export CSV</button>
+      <button class="btn btn-secondary" id="btn-export-json" aria-label="Export simulation as JSON">Export JSON</button>
+      <button class="btn btn-secondary" id="btn-import-csv" aria-label="Import previously exported CSV">Import CSV</button>
+      <input type="file" id="sim-csv-import" accept=".csv" style="display:none;" />
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <div class="summary-bar" id="sim-summary" style="display:none;" role="region" aria-label="Simulation summary">
+    <div class="summary-card">
+      <div class="label">Status</div>
+      <div class="value"><span id="sum-status" class="status-badge status-healthy">--</span></div>
+    </div>
+    <div class="summary-card">
+      <div class="label metric-tooltip">R<sub>P</sub>
+        <span class="metric-tooltip-text">Parasitoid invasion reproduction number: R_P &gt; 1 means parasitoid can invade</span>
+      </div>
+      <div class="value" id="sum-rp">--</div>
+    </div>
+    <div class="summary-card">
+      <div class="label metric-tooltip">Peak Beetles
+        <span class="metric-tooltip-text">Maximum beetle density across all years</span>
+      </div>
+      <div class="value" id="sum-peak-a">--</div>
+    </div>
+    <div class="summary-card">
+      <div class="label metric-tooltip">Peak Defoliation
+        <span class="metric-tooltip-text">Maximum defoliation fraction across all years</span>
+      </div>
+      <div class="value" id="sum-peak-d">--</div>
+    </div>
+    <div class="summary-card">
+      <div class="label metric-tooltip">Final K
+        <span class="metric-tooltip-text">Carrying capacity at the end of simulation</span>
+      </div>
+      <div class="value" id="sum-final-k">--</div>
+    </div>
+  </div>
+
+  <!-- 4 subplot divs (Plotly uses divs) -->
+  <div class="chart-grid">
+    <div class="chart-cell">
+      <div id="chart-A" class="plotly-chart" role="img" aria-label="Beetle density time series"></div>
+    </div>
+    <div class="chart-cell">
+      <div id="chart-F" class="plotly-chart" role="img" aria-label="Parasitoid density time series"></div>
+    </div>
+    <div class="chart-cell">
+      <div id="chart-K" class="plotly-chart" role="img" aria-label="Carrying capacity time series"></div>
+    </div>
+    <div class="chart-cell">
+      <div id="chart-D" class="plotly-chart" role="img" aria-label="Defoliation time series"></div>
+    </div>
+  </div>
+
+  <!-- Within-season dynamics viewer -->
+  <div class="ws-viewer" id="ws-viewer" style="display:none;">
+    <h3>Within-Season Dynamics Viewer</h3>
+    <p style="font-size:0.9em; color: var(--text-secondary, #666); margin-bottom: 12px;">
+      Inspect daily S, I, F, D trajectories within the larval vulnerability window for any year.
+      This reveals <strong>how</strong> parasitism and bird predation interact mechanistically.
+    </p>
+    <div class="ws-controls">
+      <label for="ws-year-select">Select year:</label>
+      <select id="ws-year-select" aria-label="Year to view within-season dynamics" style="min-width:80px;"></select>
+      <button class="btn btn-sm btn-primary" id="btn-ws-view" aria-label="View within-season dynamics for selected year">View Season</button>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-cell">
+        <div id="chart-ws-S" class="plotly-chart" role="img" aria-label="Susceptible larvae within-season"></div>
+      </div>
+      <div class="chart-cell">
+        <div id="chart-ws-I" class="plotly-chart" role="img" aria-label="Parasitised larvae within-season"></div>
+      </div>
+      <div class="chart-cell">
+        <div id="chart-ws-F" class="plotly-chart" role="img" aria-label="Parasitoid flies within-season"></div>
+      </div>
+      <div class="chart-cell">
+        <div id="chart-ws-D" class="plotly-chart" role="img" aria-label="Defoliation within-season"></div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ══════════════ Tab 3: Equilibrium ══════════════ -->
+<section id="tab-equilibrium" class="tab-content" role="tabpanel" aria-labelledby="tab-equilibrium-tab">
+
+  <div class="eq-toolbar">
+    <button class="btn btn-primary" id="btn-compute-eq" aria-label="Compute fixed points">Compute Fixed Points</button>
+    <button class="btn btn-secondary" id="btn-basin-stability" aria-label="Run basin stability analysis">Basin Stability</button>
+    <button class="btn btn-secondary" id="btn-export-eq-csv" style="display:none;" aria-label="Export equilibria as CSV">Export CSV</button>
+    <button class="btn btn-secondary" id="btn-export-eq-json" style="display:none;" aria-label="Export equilibria as JSON">Export JSON</button>
+    <span class="eq-hint">Uses Newton-Raphson iteration on the annual map to find (A*, F*, K*, D*)</span>
+  </div>
+
+  <div id="basin-results" style="display:none; margin-top:1rem;">
+    <h3>Basin Stability (Monte Carlo)</h3>
+    <p class="eq-hint">Fraction of random initial conditions that flow to each long-term regime.</p>
+    <div id="basin-summary" style="margin:8px 0;"></div>
+    <div class="chart-cell" style="max-width:600px;min-height:320px;">
+      <div id="chart-basin" class="plotly-chart" role="img" aria-label="Basin stability pie chart"></div>
+    </div>
+  </div>
+
+  <div id="eq-results" style="display:none;">
+    <table class="eq-table" id="eq-table" aria-label="Fixed point equilibria results">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>A*</th>
+          <th>F*</th>
+          <th>K*</th>
+          <th>D*</th>
+          <th>Stable</th>
+          <th class="metric-tooltip">Dominant Eigenvalue
+            <span class="metric-tooltip-text">Spectral radius of the Jacobian at this fixed point. &lt; 1 means stable.</span>
+          </th>
+          <th class="metric-tooltip">R1 (Resistance)
+            <span class="metric-tooltip-text">Resistance: how much the system deviates after perturbation. Range [-1, 1], higher is better.</span>
+          </th>
+          <th class="metric-tooltip">R2 (Resilience)
+            <span class="metric-tooltip-text">Resilience: how quickly the system recovers after perturbation. Range [0, 1], higher is faster recovery.</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody id="eq-tbody"></tbody>
+    </table>
+
+    <h3 style="margin-top:1.5rem;">Resistance vs Resilience</h3>
+    <div class="chart-cell" style="max-width:550px;min-height:380px;">
+      <div id="chart-r1-r2" class="plotly-chart" role="img" aria-label="R1 vs R2 scatter plot"></div>
+    </div>
+
+    <!-- Phase Portraits -->
+    <div class="phase-portraits">
+      <h3>Phase Portraits</h3>
+      <div class="phase-grid">
+        <div class="chart-cell">
+          <div id="chart-phase-AF" class="plotly-chart" role="img" aria-label="Phase portrait A vs F"></div>
+        </div>
+        <div class="chart-cell">
+          <div id="chart-phase-AD" class="plotly-chart" role="img" aria-label="Phase portrait A vs D"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ══════════════ Tab: Bifurcation ══════════════ -->
+<section id="tab-bifurcation" class="tab-content" role="tabpanel" aria-labelledby="tab-bifurcation-tab">
+
+  <h3>1-D Bifurcation Diagram</h3>
+  <div class="eq-toolbar">
+    <label for="bif-param">Parameter to sweep</label>
+    <select id="bif-param" aria-label="Parameter to sweep">
+      <option value="phi">phi</option>
+      <option value="beta">beta</option>
+      <option value="c_B">c_B</option>
+      <option value="R_B">R_B</option>
+      <option value="sigma_A">sigma_A</option>
+      <option value="sigma_F">sigma_F</option>
+      <option value="T">T</option>
+      <option value="B_index">B_index</option>
+      <option value="delta">delta</option>
+      <option value="eta">eta</option>
+      <option value="mu_S">mu_S</option>
+      <option value="mu_F">mu_F</option>
+      <option value="kappa">kappa</option>
+      <option value="h">h</option>
+    </select>
+    <label for="bif-lo">From</label>
+    <input type="number" id="bif-lo" value="0.01" step="0.001" style="width:80px" aria-label="Range start" />
+    <label for="bif-hi">To</label>
+    <input type="number" id="bif-hi" value="0.15" step="0.001" style="width:80px" aria-label="Range end" />
+    <label for="bif-npts">Points</label>
+    <input type="number" id="bif-npts" value="40" min="10" max="100" style="width:60px" aria-label="Number of sweep points" />
+    <button class="btn btn-primary" id="btn-run-bif" aria-label="Compute bifurcation diagram">Compute Bifurcation</button>
+  </div>
+
+  <div id="bif-progress" style="display:none; margin:10px 0;">
+    <progress id="bif-progress-bar" max="100" value="0" style="width:100%;"></progress>
+    <span id="bif-progress-text">0 / 0</span>
+  </div>
+
+  <div id="bif-results" style="display:none;">
+    <div class="chart-grid" style="grid-template-columns:1fr;">
+      <div class="chart-cell">
+        <div id="chart-bif-dstar" class="plotly-chart" role="img" aria-label="D* vs parameter bifurcation diagram"></div>
+      </div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-cell">
+        <div id="chart-bif-rp" class="plotly-chart" role="img" aria-label="R_P vs parameter"></div>
+      </div>
+      <div class="chart-cell">
+        <div id="chart-bif-rho" class="plotly-chart" role="img" aria-label="Dominant eigenvalue vs parameter"></div>
+      </div>
+    </div>
+  </div>
+
+  <hr />
+
+  <h3>2-D R<sub>P</sub> Boundary Contour</h3>
+  <div class="eq-toolbar">
+    <label for="bif2-p1">Param 1 (x)</label>
+    <select id="bif2-p1" aria-label="Parameter 1">
+      <option value="beta" selected>beta</option>
+      <option value="c_B">c_B</option>
+      <option value="R_B">R_B</option>
+      <option value="phi">phi</option>
+      <option value="sigma_F">sigma_F</option>
+      <option value="T">T</option>
+      <option value="B_index">B_index</option>
+    </select>
+    <label for="bif2-lo1">From</label>
+    <input type="number" id="bif2-lo1" value="0.005" step="0.001" style="width:80px" />
+    <label for="bif2-hi1">To</label>
+    <input type="number" id="bif2-hi1" value="0.04" step="0.001" style="width:80px" />
+
+    <label for="bif2-p2">Param 2 (y)</label>
+    <select id="bif2-p2" aria-label="Parameter 2">
+      <option value="c_B" selected>c_B</option>
+      <option value="beta">beta</option>
+      <option value="R_B">R_B</option>
+      <option value="phi">phi</option>
+      <option value="sigma_F">sigma_F</option>
+      <option value="T">T</option>
+      <option value="B_index">B_index</option>
+    </select>
+    <label for="bif2-lo2">From</label>
+    <input type="number" id="bif2-lo2" value="0.01" step="0.001" style="width:80px" />
+    <label for="bif2-hi2">To</label>
+    <input type="number" id="bif2-hi2" value="0.03" step="0.001" style="width:80px" />
+
+    <label for="bif2-grid">Grid</label>
+    <input type="number" id="bif2-grid" value="25" min="10" max="50" style="width:60px" />
+    <button class="btn btn-primary" id="btn-run-bif2d" aria-label="Compute 2-D R_P boundary">Compute 2-D Boundary</button>
+  </div>
+
+  <div id="bif2d-progress" style="display:none; margin:10px 0;">
+    <progress id="bif2d-progress-bar" max="100" value="0" style="width:100%;"></progress>
+    <span id="bif2d-progress-text">0 / 0</span>
+  </div>
+
+  <div id="bif2d-results" style="display:none;">
+    <div class="chart-grid" style="grid-template-columns:1fr;">
+      <div class="chart-cell">
+        <div id="chart-bif2d" class="plotly-chart" role="img" aria-label="2-D R_P boundary contour"></div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ══════════════ Tab: Fitting ══════════════ -->
+<section id="tab-fitting" class="tab-content" role="tabpanel" aria-labelledby="tab-fitting-tab">
+
+  <h3>Parameter Fitting to Field Data</h3>
+  <p class="eq-hint" style="margin-top:0;">
+    Upload a multi-year time series (CSV with a header row; any subset of columns
+    <code>year, A, F, K, D</code> is accepted) and estimate a chosen subset of
+    model parameters by Nelder-Mead least squares. After fitting, the forecast
+    regime is classified (stable coexistence, parasitoid-free, outbreak cycles,
+    or canopy collapse).
+  </p>
+
+  <div class="ew-toolbar">
+    <div class="ew-toolbar-section">
+      <h3>1. Data</h3>
+      <div class="ew-source-row">
+        <input type="file" id="fit-csv-file" accept=".csv" aria-label="Field data CSV file" />
+        <button class="btn btn-sm btn-secondary" id="btn-fit-example" aria-label="Load example field data">Load Example</button>
+        <span id="fit-csv-filename" class="ew-hint"></span>
+      </div>
+      <div id="fit-data-preview" class="ew-hint" style="margin-top:6px;"></div>
+    </div>
+
+    <div class="ew-toolbar-section">
+      <h3>2. Parameters to fit</h3>
+      <p class="ew-hint" style="margin:4px 0;">Select up to six parameters. Others stay at their current Parameters-tab values.</p>
+      <div id="fit-param-checklist" class="fit-param-grid"></div>
+    </div>
+
+    <div class="ew-toolbar-section">
+      <h3>3. Initial conditions &amp; run</h3>
+      <div class="ew-settings-row">
+        <label for="fit-A0">A(0)</label><input type="number" id="fit-A0" value="1.0" step="0.1" min="0" />
+        <label for="fit-F0">F(0)</label><input type="number" id="fit-F0" value="0.5" step="0.1" min="0" />
+        <label for="fit-D0">D(0)</label><input type="number" id="fit-D0" value="0.0" step="0.1" min="0" />
+        <label for="fit-maxiter">Max NM iterations</label>
+        <input type="number" id="fit-maxiter" value="200" min="50" max="2000" step="50" />
+      </div>
+      <div class="ew-btn-row">
+        <button class="btn btn-primary" id="btn-run-fit" aria-label="Run parameter fit">Run Fit</button>
+        <button class="btn btn-secondary" id="btn-export-fit" style="display:none;" aria-label="Export fit results as JSON">Export JSON</button>
+      </div>
+      <div id="fit-progress" style="display:none;" class="ew-hint">Optimising&hellip;</div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="fit-results" style="display:none;">
+
+    <div class="fit-regime-box" id="fit-regime-box" role="status" aria-live="polite"></div>
+
+    <h3 style="margin-top:1.25rem;">Fitted Parameters</h3>
+    <table class="eq-table" id="fit-table" aria-label="Fitted parameter values">
+      <thead>
+        <tr><th>Parameter</th><th>Initial</th><th>Fitted</th><th>% change</th></tr>
+      </thead>
+      <tbody id="fit-tbody"></tbody>
+    </table>
+
+    <h3 style="margin-top:1.25rem;">Residual Diagnostics</h3>
+    <table class="eq-table" id="fit-stats-table" aria-label="Residual diagnostics per variable">
+      <thead>
+        <tr>
+          <th>Variable</th><th>n</th>
+          <th class="metric-tooltip">RMSE<span class="metric-tooltip-text">Root mean square error</span></th>
+          <th class="metric-tooltip">R²<span class="metric-tooltip-text">Coefficient of determination</span></th>
+          <th class="metric-tooltip">Lag-1 ACF<span class="metric-tooltip-text">Residual autocorrelation. |ACF(1)| &lt; 0.3 is ideal.</span></th>
+          <th class="metric-tooltip">Durbin-Watson<span class="metric-tooltip-text">DW ≈ 2 means no residual autocorrelation. DW &lt; 1.5 → positive autocorrelation.</span></th>
+        </tr>
+      </thead>
+      <tbody id="fit-stats-tbody"></tbody>
+    </table>
+
+    <h3 style="margin-top:1.25rem;">Observed vs Fitted</h3>
+    <div class="chart-grid">
+      <div class="chart-cell"><div id="chart-fit-overlay" class="plotly-chart" role="img" aria-label="Observed vs fitted trajectory"></div></div>
+      <div class="chart-cell"><div id="chart-fit-residuals" class="plotly-chart" role="img" aria-label="Residual time series"></div></div>
+    </div>
+
+    <h3 style="margin-top:1.25rem;">Long-term Projection (100 years)</h3>
+    <div class="chart-cell"><div id="chart-fit-forecast" class="plotly-chart" role="img" aria-label="Fitted-parameter forward projection"></div></div>
+  </div>
+
+</section>
+
+<!-- ══════════════ Tab 4: Early Warnings ══════════════ -->
+<section id="tab-warnings" class="tab-content" role="tabpanel" aria-labelledby="tab-warnings-tab">
+
+  <div class="ew-toolbar">
+    <div class="ew-toolbar-section">
+      <h3>Data Source</h3>
+      <div class="ew-source-row">
+        <label>
+          <input type="radio" name="ew-source" value="simulation" checked /> Use simulated data
+        </label>
+        <label>
+          <input type="radio" name="ew-source" value="csv" /> Upload CSV
+        </label>
+        <input type="file" id="ew-csv-file" accept=".csv" style="display:none;" />
+        <button class="btn btn-sm btn-secondary" id="btn-ew-upload" style="display:none;" aria-label="Upload CSV file for early warning analysis">Choose CSV File</button>
+        <span id="ew-csv-filename" class="ew-hint" style="display:none;"></span>
+        <div id="ew-data-preview" style="display:none;"></div>
+        <div id="ew-data-quality" class="ew-hint" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="ew-toolbar-section">
+      <h3>Settings</h3>
+      <div class="ew-settings-row">
+        <label for="ew-column">State variable:</label>
+        <select id="ew-column" aria-label="State variable for early warning analysis">
+          <option value="A">A (Beetles)</option>
+          <option value="F">F (Parasitoids)</option>
+          <option value="K">K (Carrying Capacity)</option>
+          <option value="D">D (Defoliation)</option>
+        </select>
+
+        <label for="ew-window">Window size:</label>
+        <input type="number" id="ew-window" value="0" min="0" max="100" step="1" aria-label="Rolling window size for EWS analysis" />
+        <span class="ew-hint">(0 = auto: 50% of series length)</span>
+      </div>
+    </div>
+
+    <div class="ew-btn-row">
+      <button class="btn btn-primary" id="btn-run-ew" aria-label="Analyze early warning signals">Analyze Early Warnings</button>
+      <button class="btn btn-secondary" id="btn-export-ew-csv" style="display:none;" aria-label="Export early warnings as CSV">Export CSV</button>
+      <button class="btn btn-secondary" id="btn-export-ew-json" style="display:none;" aria-label="Export early warnings as JSON">Export JSON</button>
+    </div>
+  </div>
+
+  <!-- Traffic-light alert -->
+  <div id="ew-alert-box" class="ew-alert-box" style="display:none;" role="alert" aria-live="polite">
+    <div class="ew-traffic-light" id="ew-traffic-light"></div>
+    <div class="ew-alert-text" id="ew-alert-text"></div>
+  </div>
+
+  <!-- Kendall tau results table -->
+  <div id="ew-kendall-results" style="display:none;">
+    <h3>Kendall Tau Trend Tests</h3>
+    <table class="eq-table" id="ew-kendall-table" aria-label="Kendall tau trend test results">
+      <thead>
+        <tr>
+          <th>Indicator</th>
+          <th>Kendall &tau;</th>
+          <th>p-value</th>
+          <th>Significant?</th>
+        </tr>
+      </thead>
+      <tbody id="ew-kendall-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- 3 indicator charts -->
+  <div class="chart-grid ew-chart-grid">
+    <div class="chart-cell">
+      <div id="chart-ew-var" class="plotly-chart" role="img" aria-label="Rolling variance chart"></div>
+    </div>
+    <div class="chart-cell">
+      <div id="chart-ew-ac" class="plotly-chart" role="img" aria-label="Rolling autocorrelation chart"></div>
+    </div>
+    <div class="chart-cell">
+      <div id="chart-ew-spec" class="plotly-chart" role="img" aria-label="Spectral reddening index chart"></div>
+    </div>
+  </div>
+
+  <!-- ── Sensitivity Analysis (LHS-PRCC) ── -->
+  <hr class="section-divider">
+  <h3>Sensitivity Analysis (LHS-PRCC)</h3>
+  <p class="ew-hint">
+    Latin Hypercube Sampling with Partial Rank Correlation Coefficients identifies
+    which parameters most strongly influence the dominant eigenvalue &rho;* and regime
+    shift probability. This is computationally intensive &mdash; please be patient.
+  </p>
+
+  <div class="ew-toolbar-section">
+    <div class="ew-settings-row">
+      <label for="lhs-n-samples">Samples:</label>
+      <input type="number" id="lhs-n-samples" value="100" min="20" max="500" step="10" aria-label="Number of LHS samples" />
+      <label for="lhs-n-years">Years per sample:</label>
+      <input type="number" id="lhs-n-years" value="50" min="10" max="200" step="10" aria-label="Years per LHS sample" />
+    </div>
+    <div class="ew-btn-row">
+      <button class="btn btn-primary" id="btn-run-lhs" aria-label="Run LHS-PRCC sensitivity analysis">Run LHS-PRCC Analysis</button>
+    </div>
+    <div id="lhs-progress" style="display:none;">
+      <progress id="lhs-progress-bar" value="0" max="100" style="width: 200px;" aria-label="LHS-PRCC analysis progress"></progress>
+      <span id="lhs-progress-text">0 / 100</span>
+    </div>
+  </div>
+
+  <!-- Regime shift probability -->
+  <div id="lhs-regime-box" style="display:none; margin: 1rem 0;">
+    <strong>Regime Shift Probability:</strong> <span id="lhs-regime-prob"></span>
+  </div>
+
+  <!-- PRCC bar chart (horizontal) -->
+  <div id="lhs-prcc-chart-container" style="display:none;">
+    <div class="chart-cell" style="min-height: 400px;">
+      <div id="chart-lhs-prcc" class="plotly-chart" role="img" aria-label="PRCC sensitivity analysis horizontal bar chart"></div>
+    </div>
+  </div>
+
+  <!-- PRCC results table -->
+  <div id="lhs-prcc-results" style="display:none;">
+    <h4>PRCC Results</h4>
+    <table class="eq-table" id="lhs-prcc-table" aria-label="PRCC sensitivity analysis results">
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th class="metric-tooltip">PRCC
+            <span class="metric-tooltip-text">Partial Rank Correlation Coefficient: measures monotonic relationship with rho* after removing effects of other parameters</span>
+          </th>
+          <th>p-value</th>
+          <th>Significant?</th>
+        </tr>
+      </thead>
+      <tbody id="lhs-prcc-tbody"></tbody>
+    </table>
+  </div>
+
+</section>
+
+<!-- ══════════════ Tab 5: Control Comparison ══════════════ -->
+<section id="tab-control" class="tab-content" role="tabpanel" aria-labelledby="tab-control-tab">
+
+  <div class="ctrl-toolbar">
+    <div class="ctrl-toolbar-section">
+      <h3>Simulation Settings</h3>
+      <div class="ctrl-settings-row">
+        <label for="ctrl-years">Years:</label>
+        <input type="number" id="ctrl-years" value="50" min="1" max="200" step="1" aria-label="Control simulation years" />
+
+        <label for="ctrl-A0">A(0):</label>
+        <input type="number" id="ctrl-A0" value="1.0" step="0.1" min="0" aria-label="Initial beetle density for control comparison" />
+
+        <label for="ctrl-F0">F(0):</label>
+        <input type="number" id="ctrl-F0" value="0.5" step="0.1" min="0" aria-label="Initial parasitoid density for control comparison" />
+
+        <label for="ctrl-D0">D(0):</label>
+        <input type="number" id="ctrl-D0" value="0.0" step="0.1" min="0" aria-label="Initial defoliation for control comparison" />
+      </div>
+    </div>
+
+    <div class="ctrl-toolbar-section">
+      <h3>Cost Weights</h3>
+      <div class="ctrl-weights-grid">
+        <div class="ctrl-weight-item">
+          <label for="ctrl-w1">w<sub>1</sub> (defoliation):</label>
+          <input type="range" id="ctrl-w1" min="0" max="20" step="0.5" value="10" aria-label="Defoliation cost weight" />
+          <span id="ctrl-w1-val">10</span>
+        </div>
+        <div class="ctrl-weight-item">
+          <label for="ctrl-w2">w<sub>2</sub> (beetle density):</label>
+          <input type="range" id="ctrl-w2" min="0" max="10" step="0.5" value="1" aria-label="Beetle density cost weight" />
+          <span id="ctrl-w2-val">1</span>
+        </div>
+        <div class="ctrl-weight-item">
+          <label for="ctrl-w3">w<sub>3</sub> (terminal defoliation):</label>
+          <input type="range" id="ctrl-w3" min="0" max="20" step="0.5" value="5" aria-label="Terminal defoliation cost weight" />
+          <span id="ctrl-w3-val">5</span>
+        </div>
+        <div class="ctrl-weight-item">
+          <label for="ctrl-w4">w<sub>4</sub> (capacity loss):</label>
+          <input type="range" id="ctrl-w4" min="0" max="20" step="0.5" value="5" aria-label="Capacity loss cost weight" />
+          <span id="ctrl-w4-val">5</span>
+        </div>
+        <div class="ctrl-weight-item">
+          <label for="ctrl-cC">c<sub>C</sub> (chemical cost):</label>
+          <input type="range" id="ctrl-cC" min="0" max="20" step="0.5" value="5" aria-label="Chemical control cost coefficient" />
+          <span id="ctrl-cC-val">5</span>
+        </div>
+        <div class="ctrl-weight-item">
+          <label for="ctrl-cP">c<sub>P</sub> (biocontrol cost):</label>
+          <input type="range" id="ctrl-cP" min="0" max="10" step="0.5" value="2" aria-label="Biocontrol cost coefficient" />
+          <span id="ctrl-cP-val">2</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctrl-btn-row">
+      <button class="btn btn-primary" id="btn-run-ctrl" aria-label="Run control comparison">Run Comparison</button>
+      <button class="btn btn-secondary" id="btn-export-ctrl-csv" style="display:none;" aria-label="Export control results as CSV">Export CSV</button>
+      <button class="btn btn-secondary" id="btn-export-ctrl-json" style="display:none;" aria-label="Export control results as JSON">Export JSON</button>
+    </div>
+  </div>
+
+  <!-- Custom Strategy Section -->
+  <div class="ctrl-toolbar" id="custom-strategy-section">
+    <h3>Custom Strategy</h3>
+    <div class="ctrl-settings-row">
+      <label><input type="checkbox" id="ctrl-custom-enable"> Enable Custom Strategy</label>
+      <label for="ctrl-custom-uP">u_P:</label>
+      <input type="range" id="ctrl-custom-uP" min="0" max="0.5" step="0.01" value="0.1" disabled />
+      <span id="ctrl-custom-uP-val">0.10</span>
+      <label for="ctrl-custom-uC">u_C:</label>
+      <input type="range" id="ctrl-custom-uC" min="0" max="0.2" step="0.01" value="0" disabled />
+      <span id="ctrl-custom-uC-val">0.00</span>
+      <label for="ctrl-custom-uB">u_B:</label>
+      <input type="range" id="ctrl-custom-uB" min="0" max="1" step="0.01" value="0" disabled />
+      <span id="ctrl-custom-uB-val">0.00</span>
+    </div>
+  </div>
+
+  <!-- Results table -->
+  <div id="ctrl-results" style="display:none;">
+    <h3>Strategy Comparison Results</h3>
+    <table class="eq-table" id="ctrl-table" aria-label="Control strategy comparison results">
+      <thead>
+        <tr>
+          <th>Strategy</th>
+          <th>u<sub>C</sub></th>
+          <th>u<sub>P</sub></th>
+          <th>Cost J</th>
+          <th>Final K</th>
+          <th>Final D</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="ctrl-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Bar chart -->
+  <div class="ctrl-chart-container" id="ctrl-chart-wrap" style="display:none;">
+    <div class="chart-cell" style="min-height:380px;">
+      <div id="chart-ctrl-bar" class="plotly-chart" role="img" aria-label="Control strategy cost comparison bar chart"></div>
+    </div>
+  </div>
+
+  <!-- Pareto scatter -->
+  <div class="pareto-section" id="pareto-section" style="display:none;">
+    <h3>Cost vs Defoliation Trade-off</h3>
+    <div class="chart-cell" style="min-height:380px;">
+      <div id="chart-pareto" class="plotly-chart" role="img" aria-label="Pareto scatter of cost versus defoliation"></div>
+    </div>
+  </div>
+
+  <!-- Temporal allocation stacked area -->
+  <div class="ctrl-chart-container" id="temporal-section" style="display:none;">
+    <h3>Temporal Cost Allocation (Best Strategy)</h3>
+    <div class="chart-cell" style="min-height:380px;">
+      <div id="chart-temporal" class="plotly-chart" role="img" aria-label="Temporal cost allocation stacked area chart"></div>
+    </div>
+  </div>
+
+  <!-- Multi-panel trajectory comparison -->
+  <div class="ctrl-chart-container" id="trajectories-section" style="display:none;">
+    <h3>Trajectory Comparison (A, F, K, D)</h3>
+    <div class="chart-cell" style="min-height:550px;">
+      <div id="chart-trajectories" class="plotly-chart" role="img" aria-label="Multi-panel trajectory comparison"></div>
+    </div>
+  </div>
+
+  <!-- Cost breakdown table -->
+  <div id="ctrl-cost-table-section" style="display:none;">
+    <h3>Cost Breakdown by Strategy</h3>
+    <table class="eq-table" id="ctrl-cost-table" aria-label="Cost breakdown table">
+      <thead>
+        <tr>
+          <th>Strategy</th>
+          <th>u<sub>P</sub></th>
+          <th>u<sub>C</sub></th>
+          <th>u<sub>B</sub></th>
+          <th>Control Cost</th>
+          <th>Running Cost</th>
+          <th>Total J</th>
+        </tr>
+      </thead>
+      <tbody id="ctrl-cost-tbody"></tbody>
+    </table>
+  </div>
+
+</section>
+
+<!-- ══════════════ Tab: Scenario Comparison ══════════════ -->
+<section id="tab-comparison" class="tab-content" role="tabpanel" aria-labelledby="tab-comparison-tab">
+
+  <h2>Scenario Comparison</h2>
+  <p>Save parameter sets as named scenarios, compare them side-by-side, and explore parameter sensitivity with 1-D sweeps.</p>
+
+  <!-- Save scenario -->
+  <div class="card" style="margin-bottom:16px; padding:16px; border:1px solid var(--border); border-radius:8px;">
+    <h3>Save Current Parameters</h3>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <input type="text" id="sc-name" value="Scenario 1" style="padding:6px 10px; border:1px solid var(--border); border-radius:4px; width:200px;" />
+      <button class="btn btn-primary" id="btn-save-scenario">Save Scenario</button>
+      <button class="btn" id="btn-clear-scenarios" style="background:#dc3545; color:#fff; border:none; padding:6px 14px; border-radius:4px; cursor:pointer;">Clear All</button>
+    </div>
+    <p id="sc-saved-list" style="margin-top:8px; font-style:italic; color:var(--text-muted);">No scenarios saved.</p>
+  </div>
+
+  <!-- Compare scenarios -->
+  <div class="card" style="margin-bottom:16px; padding:16px; border:1px solid var(--border); border-radius:8px;">
+    <h3>Compare Scenarios</h3>
+    <div id="sc-select-container" style="margin-bottom:10px;">
+      <em>Save at least 2 scenarios to compare.</em>
+    </div>
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+      <label>Years: <input type="number" id="sc-cmp-years" value="50" min="10" max="200" step="5" style="width:60px;" /></label>
+      <label>A0: <input type="number" id="sc-cmp-a0" value="0.8" min="0" step="0.1" style="width:70px;" /></label>
+      <button class="btn btn-primary" id="btn-run-compare">Run Comparison</button>
+    </div>
+    <div id="sc-cmp-ts-A" class="plotly-chart" style="margin-bottom:8px;"></div>
+    <div id="sc-cmp-ts-F" class="plotly-chart" style="margin-bottom:8px;"></div>
+    <div id="sc-cmp-ts-K" class="plotly-chart" style="margin-bottom:8px;"></div>
+    <div id="sc-cmp-ts-D" class="plotly-chart" style="margin-bottom:8px;"></div>
+    <div id="sc-cmp-table" style="margin-bottom:16px;"></div>
+    <div id="sc-cmp-radar" class="plotly-chart"></div>
+  </div>
+
+  <!-- 1-D Sweep -->
+  <div class="card" style="margin-bottom:16px; padding:16px; border:1px solid var(--border); border-radius:8px;">
+    <h3>1-D Parameter Sweep</h3>
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+      <label>Parameter: <select id="sc-sw1-param" style="padding:4px;"></select></label>
+      <label>Min: <input type="number" id="sc-sw1-lo" value="0.01" step="0.001" style="width:80px;" /></label>
+      <label>Max: <input type="number" id="sc-sw1-hi" value="0.1" step="0.001" style="width:80px;" /></label>
+      <label>Points: <input type="number" id="sc-sw1-n" value="25" min="5" max="60" style="width:60px;" /></label>
+      <button class="btn btn-primary" id="btn-run-sw1">Run Sweep</button>
+    </div>
+    <div id="sc-sw1-plot" class="plotly-chart"></div>
+  </div>
+
+</section>
+
+<!-- ══════════════ Tab 6: About / Help ══════════════ -->
+<section id="tab-about" class="tab-content" role="tabpanel" aria-labelledby="tab-about-tab">
+  <div class="about-container">
+
+    <div class="about-section">
+      <h2>About AlderIPM-Sim</h2>
+      <p>
+        AlderIPM-Sim is a browser-based decision-support tool for managing
+        <em>Agelastica alni</em> (alder leaf beetle) outbreaks in European
+        alder (<em>Alnus</em>) forests. It implements a coupled
+        ecoepidemiological model that integrates:
+      </p>
+      <ul>
+        <li><strong>Within-season continuous dynamics</strong> &mdash; a 4-state ODE system (susceptible larvae S, parasitised larvae I, adult parasitoid flies F, cumulative defoliation D) solved with 4th-order Runge-Kutta integration over a ~50-day larval vulnerability window.</li>
+        <li><strong>Annual discrete map</strong> &mdash; between-year transitions for beetle reproduction (Beverton-Holt), parasitoid overwinter survival, and foliage recovery/decline.</li>
+        <li><strong>Biological control</strong> &mdash; parasitism by <em>Meigenia mutabilis</em> (Holling Type II functional response) and generalist avian predation by passerine birds.</li>
+      </ul>
+    </div>
+
+    <div class="about-section">
+      <h2>How to Use</h2>
+      <ol>
+        <li><strong>Parameters tab:</strong> Adjust model parameters using the sliders. Each parameter has ecologically meaningful bounds. Click the info icon next to any parameter for its ecological description. Use "Share Configuration" to encode your settings in a shareable URL.</li>
+        <li><strong>Simulation tab:</strong> Set initial conditions (A<sub>0</sub>, F<sub>0</sub>, D<sub>0</sub>) and control inputs (u<sub>C</sub>, u<sub>P</sub>), then click "Run Simulation" to see multi-year dynamics across 4 subplots. Use the within-season viewer to inspect daily dynamics for any year. Export results as CSV or JSON.</li>
+        <li><strong>Equilibrium tab:</strong> Click "Compute Fixed Points" to find equilibria of the annual map using Newton-Raphson iteration. The table shows stability (eigenvalue analysis of the Jacobian), plus resistance (R1) and resilience (R2) metrics. Phase portraits show trajectory shape in A-F and A-D planes.</li>
+        <li><strong>Early Warnings tab:</strong> Detect critical slowing down signals that precede regime shifts. Use simulated data or upload a CSV with time-series observations. The PRCC horizontal bar chart shows which parameters most influence system stability.</li>
+        <li><strong>Control Comparison tab:</strong> Compare 3 management strategies by running parallel simulations. The Pareto scatter shows the cost-defoliation trade-off for each strategy.</li>
+      </ol>
+    </div>
+
+    <div class="about-section">
+      <h2>Parameter Glossary</h2>
+      <div class="glossary-grid" id="glossary-grid">
+        <!-- Populated by app.js -->
+      </div>
+    </div>
+
+    <div class="about-section">
+      <h2>Model Equations</h2>
+      <div class="eq-block">
+        <h4>Within-season ODE (Eqs 1&ndash;4; &tau; &isin; [0, T])</h4>
+        <pre>
+dS/d&tau; = -&beta;&middot;S&middot;F/(1+h&middot;S) - c_B&middot;B_t&middot;S/(1+a_B&middot;(S+I)) - (&mu;_S + u_C)&middot;S
+dI/d&tau; =  &beta;&middot;S&middot;F/(1+h&middot;S) - c_B&middot;B_t&middot;I/(1+a_B&middot;(S+I)) - (&mu;_I + &delta; + u_C)&middot;I
+dF/d&tau; =  &eta;&middot;&delta;&middot;I - &mu;_F&middot;F + u_P          F(0) = F_t
+dD/d&tau; =  &kappa;&middot;(S + I)                       D(0) = 0
+(total larvae S+I set the bird-predation saturation; numerators are per class)</pre>
+
+        <h4>Annual map (Eqs 5&ndash;8; between years)</h4>
+        <pre>
+S(0)   = R_B&middot;A_t / (1 + A_t/K_t)        I(0)=0,  F(0)=F_t      (Eq 5, Beverton&ndash;Holt)
+A(t+1) = &sigma;_A&middot;S(T)                          F(t+1) = &sigma;_F&middot;F(T)   (Eq 6)
+B_t    = B_index&middot;(1 + &xi;&middot;u_B)                                   (Eq 7)
+K(t+1) = K_0&middot;exp(-&phi;&middot;D_t)                                       (Eq 8)</pre>
+      </div>
+    </div>
+
+    <div class="about-section">
+      <h2>Early Warning Signals</h2>
+      <p>
+        As the system approaches a bifurcation (tipping point), critical
+        slowing down causes three measurable changes in state-variable
+        time series:
+      </p>
+      <ul>
+        <li><strong>Increasing variance</strong> &mdash; perturbations decay more slowly, widening the distribution.</li>
+        <li><strong>Increasing lag-1 autocorrelation</strong> &mdash; successive observations become more correlated as "memory" of perturbations grows.</li>
+        <li><strong>Spectral reddening</strong> &mdash; the power spectrum shifts toward lower frequencies.</li>
+      </ul>
+      <p>
+        Each indicator is tested for a monotonic increasing trend using
+        Kendall's &tau; rank correlation. The traffic-light alert system
+        is: <strong style="color:var(--success)">GREEN</strong> (no significant trends),
+        <strong style="color:var(--warning)">AMBER</strong> (one indicator significant),
+        <strong style="color:var(--danger)">RED</strong> (both variance and autocorrelation increasing).
+      </p>
+    </div>
+
+    <div class="about-section">
+      <h2>References</h2>
+      <ul>
+        <li>Scheffer, M. et al. (2009). Early-warning signals for critical transitions. <em>Nature</em>, 461, 53&ndash;59.</li>
+        <li>Dakos, V. et al. (2012). Methods for detecting early warnings of critical transitions in time series. <em>PLoS ONE</em>, 7(7), e41010.</li>
+      </ul>
+    </div>
+
+    <div class="about-section">
+      <h2>Technical Notes</h2>
+      <p>
+        This application runs entirely in the browser with no server-side
+        computation. The ODE system is integrated using 4th-order Runge-Kutta
+        (dt&nbsp;=&nbsp;0.1 days). Equilibria are found via Newton-Raphson with
+        numerical Jacobian computation. All charts are rendered with Plotly.js
+        using the Okabe-Ito colorblind-safe palette. Dark mode and all settings
+        are saved to localStorage.
+      </p>
+      <p>
+        Source code is available in the <code>alder-ipm-sim-web/</code> directory
+        alongside companion R and Python packages.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════════ Tab: 3D Forest ══════════════ -->
+<section id="tab-forest3d" class="tab-content" role="tabpanel" aria-labelledby="tab-forest3d-tab">
+  <div class="f3d-wrap" id="f3d-wrap">
+    <canvas id="f3d-canvas"></canvas>
+    <div class="f3d-loading" id="f3d-loading">Loading 3D forest…</div>
+
+    <!-- top status: year · season phase · regime -->
+    <div class="f3d-top">
+      <div class="f3d-yr">Year <b id="f3d-year">0</b></div>
+      <div class="f3d-phase" id="f3d-phase">Spring flush</div>
+      <div class="f3d-regime" id="f3d-regime"><span class="f3d-dot"></span><span id="f3d-regime-txt">—</span></div>
+    </div>
+
+    <!-- controls panel -->
+    <div class="f3d-panel">
+      <div class="f3d-h">Two-timescale simulation</div>
+      <p class="f3d-note">The same model as this Simulation tab, in space. Press <b>Run Simulation</b> above (or <b>▶ Play</b>) to watch the experiment unfold; ecology follows the <b>Parameters</b> tab, initial conditions &amp; u<sub>C</sub>/u<sub>P</sub> follow the run.</p>
+      <div class="f3d-btns">
+        <button class="f3d-btn primary" id="f3d-play">▶ Play</button>
+        <button class="f3d-btn" id="f3d-step">+1 yr</button>
+        <button class="f3d-btn" id="f3d-settle">Settle</button>
+        <button class="f3d-btn" id="f3d-reset">Reset</button>
+      </div>
+      <div class="f3d-sub">Management strategies (Objective 3)</div>
+      <div class="f3d-chips" id="f3d-strats"></div>
+      <div class="f3d-ctls" id="f3d-ctls"></div>
+      <button class="f3d-btn wide" id="f3d-sync">↻ Sync from Parameters tab</button>
+    </div>
+
+    <!-- stability diagnostics + interpretation -->
+    <div class="f3d-metrics">
+      <div class="f3d-h">Stability diagnostics</div>
+      <div class="f3d-mrow"><span>Regime class</span><b id="f3d-mclass">—</b></div>
+      <div class="f3d-mrow"><span><i>ℛ</i><sub>P</sub> · parasitoid invasion</span><b id="f3d-mrp">—</b></div>
+      <div class="f3d-mrow"><span><i>ρ*</i> · spectral radius</span><b id="f3d-mrho">—</b></div>
+      <div class="f3d-mrow"><span>R1 · resistance</span><b id="f3d-mr1">—</b></div>
+      <div class="f3d-mrow"><span>R2 · resilience</span><b id="f3d-mr2">—</b></div>
+      <div class="f3d-mrow"><span><i>J</i> · cost proxy (25 yr)</span><b id="f3d-mj">—</b></div>
+      <div class="f3d-interp" id="f3d-interp">—</div>
+    </div>
+
+    <!-- legend: what each object means -->
+    <div class="f3d-legend">
+      <div class="f3d-h">What you are seeing</div>
+      <div class="f3d-lr"><i style="background:#3f7a2e"></i>Alder canopy — fullness = <em>K</em>, loss = <em>D</em></div>
+      <div class="f3d-lr"><i style="background:#8bbf3c"></i>Susceptible larvae <em>S</em>(τ)</div>
+      <div class="f3d-lr"><i style="background:#d98a3d"></i>Parasitised larvae <em>I</em>(τ) — epidemic core</div>
+      <div class="f3d-lr"><i style="background:#cdbf9c;border:1px solid #a89a78"></i>Parasitoid flies <em>F</em>(τ) · <em>M. mutabilis</em></div>
+      <div class="f3d-lr"><i style="background:#2f3a55"></i>Adult beetles <em>A</em><sub>t</sub> · <em>A. alni</em></div>
+      <div class="f3d-lr"><i style="background:#2c3138"></i>Passerine birds · pressure <em>B</em></div>
+    </div>
+
+    <!-- within-season chart -->
+    <div class="f3d-season">
+      <div class="f3d-h">Within season (τ, days)
+        <span class="f3d-leg"><i style="background:#8bbf3c"></i>S</span>
+        <span class="f3d-leg"><i style="background:#d98a3d"></i>I</span>
+        <span class="f3d-leg"><i style="background:#7a5ea8"></i>F</span>
+        <span class="f3d-leg"><i style="background:#c0392b"></i>D</span>
+      </div>
+      <canvas id="f3d-chart" width="620" height="150"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ Guided Tour Overlay ══════════════ -->
+<div class="tour-overlay" id="tour-overlay" role="dialog" aria-modal="true" aria-label="Welcome tour">
+  <div class="tour-card">
+    <h2 id="tour-title">Welcome to AlderIPM-Sim</h2>
+    <div class="tour-step-indicator" id="tour-step-indicator">Step 1 of 5</div>
+    <p id="tour-body">This tool helps forest managers and research on *Agelastica alni* beetle outbreaks. Let's take a quick tour of the main features.</p>
+    <div class="tour-actions">
+      <button class="tour-skip" id="tour-skip" aria-label="Skip tour">Skip tour</button>
+      <button class="btn btn-primary" id="tour-next" aria-label="Next step">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts (order: parameters -> model -> simulation -> warnings -> control -> fitting -> crosslang -> charts -> app -> wiring -> location -> friendly -> agent-ui -> scenarios-inline) -->
+<script src="js/parameters.js"></script>
+<script src="js/model.js"></script>
+<script src="js/simulation.js"></script>
+<script src="js/warnings.js"></script>
+<script src="js/control.js"></script>
+<script src="js/fitting.js"></script>
+<script src="js/crosslang.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/perf.js"></script>
+<script src="js/app.js"></script>
+<script src="js/wiring.js"></script>
+<script src="js/friendly.js"></script>
+<script src="js/scenarios-inline.js"></script>
+<script src="js/cockpit.js"></script>
+<script src="js/science.js"></script>
+<script src="js/health.js"></script>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module" src="js/forest3d.js"></script>
+
+</body>
+</html>
